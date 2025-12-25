@@ -24,9 +24,11 @@ config.server = {
     maxLoginAttempts = 3,
     lockoutDuration = 600,
     
-    -- Currency minting
-    mintChestSide = "bottom",  -- Side where currency chest is attached
-    mintButtonSide = "top",    -- Side where mint button signal is sent
+    -- Currency storage (now uses peripheral network)
+    -- Chests are identified by paper markers placed inside them:
+    -- - "MINT" paper in mint chest
+    -- - "OUTPUT" paper in output chest  
+    -- - "1", "5", "10", "20", "50", "100" papers in denomination chests
 }
 
 -- Management console configuration
@@ -38,11 +40,11 @@ config.management = {
     -- Network port
     port = 42002,
     
-    -- Redstone configuration for hopper/dropper control
-    -- Redstone controls which hopper/dropper pushes items into which void chest
-    -- Void chest frequencies are set in-game using Create Utilities (not via redstone)
-    redstoneStartSide = "left",  -- Starting side for redstone outputs
-    maxATMs = 6,  -- Maximum 6 ATMs (one per computer side: left, right, front, back, top, bottom)
+    -- Network storage configuration
+    -- All chests connected via wired modem network
+    -- Special chests identified by paper markers with specific names
+    maxATMs = 16,  -- Maximum ATMs supported
+    maxDenominations = 6,  -- Number of different bill denominations
     
     -- ATM Authorization
     authorizedATMs = {},  -- List of authorized ATM IDs with their tokens
@@ -91,7 +93,7 @@ config.theme = {
 -- Currency configuration
 config.currency = {
     -- Item to use as currency
-    itemName = "minecraft:gold_ingot",
+    itemName = "minecraft:written_book",  -- Signed books prevent forgery
     
     -- Display name
     displayName = "Credit",
@@ -103,6 +105,19 @@ config.currency = {
     -- Currency verification
     requireNBT = true,  -- Require NBT tag for currency
     nbtPrefix = "CCBANK_",  -- Prefix for NBT tags
+    
+    -- Denomination system (different bill values)
+    denominations = {
+        {value = 1, name = "1 Credit", color = "white"},
+        {value = 5, name = "5 Credits", color = "green"},
+        {value = 10, name = "10 Credits", color = "blue"},
+        {value = 20, name = "20 Credits", color = "purple"},
+        {value = 50, name = "50 Credits", color = "orange"},
+        {value = 100, name = "100 Credits", color = "red"}
+    },
+    
+    -- Default denomination for withdrawals (try to use largest bills first)
+    preferLargeBills = true
 }
 
 -- Security configuration
