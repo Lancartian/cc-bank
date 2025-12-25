@@ -284,27 +284,6 @@ handlers[network.MSG.ACCOUNT_LIST] = function(message, sender)
 end
 
 -- Balance check
-    
-    local accountNumber, err = accounts.authenticate(username, password)
-    if not accountNumber then
-        return network.errorResponse("auth_failed", err or "Authentication failed")
-    end
-    
-    local token = createSession(accountNumber)
-    local account = accounts.get(accountNumber)
-    
-    -- Send encrypted response
-    return network.createMessage(network.MSG.AUTH_RESPONSE, {
-        success = true,
-        token = token,
-        accountNumber = accountNumber,
-        username = account.username,
-        balance = account.balance,
-        encryptionKey = encryptionKey  -- Share encryption key for session
-    }, nil, encryptionKey)
-end
-
--- Balance check
 handlers[network.MSG.BALANCE_CHECK] = function(message, sender)
     local session, err = validateSession(message.token)
     if not session then
