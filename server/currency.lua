@@ -244,4 +244,3 @@ end
 
 return currency
 
-return currency
