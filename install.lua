@@ -44,7 +44,7 @@ else
 end
 
 -- Ask which component to install (if not specified as argument)
-if not component or (component ~= "all" and component ~= "server" and component ~= "management" and component ~= "atm") then
+if component == nil then
     print("Which component do you want to install?")
     print("1. All components (recommended for first install)")
     print("2. Server only")
@@ -67,6 +67,11 @@ if not component or (component ~= "all" and component ~= "server" and component 
         print("Invalid choice!")
         return
     end
+elseif component ~= "all" and component ~= "server" and component ~= "management" and component ~= "atm" then
+    -- Invalid argument provided
+    print("ERROR: Invalid component '" .. component .. "'")
+    print("Valid options: all, server, management, atm")
+    return
 end
 
 print("")
