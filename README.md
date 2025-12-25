@@ -45,7 +45,6 @@ A comprehensive, secure banking system for ComputerCraft with military-grade enc
 ### 🏧 ATM Network
 - **Multiple ATMs**: Support for up to 16 ATMs with unique void chest frequencies
 - **Interface Only**: ATMs have no inventory - they're just user interface terminals
-- **Analog Redstone Control**: Uses signal strength 0-15 for ATM selection
 - **Authorization Required**: Only manager-authorized ATMs can register
 - **User-friendly interface**: Beautiful SGL-based touch interface
 - **Complete functionality**: Withdraw, deposit, transfer, and balance checks
@@ -397,9 +396,9 @@ CC-Bank uses **signed books (written_book)** as currency for built-in forgery pr
    - Minted currency can be withdrawn from ATMs
    - Backend automatically:
      * Selects appropriate denominations for the withdrawal amount
-     * Activates input-side redstone to select denomination chest
-     * Activates output-side redstone to select ATM void chest
-     * Items transfer via Create Utilities void chest frequency matching
+     * Transfers bills from denomination chests to OUTPUT chest
+     * Pushes items to ATM void chest via peripheral network
+     * Items transfer wirelessly via Create Utilities void chest frequency matching
    - Currency is verified on every transaction using NBT hash
 
 ## Usage
@@ -807,17 +806,12 @@ This system implements security controls aligned with:
    - Open void chest GUI and verify the two items in frequency slots match exactly
    - Both items must be identical (e.g., both have Stone + Dirt, not Stone + Cobblestone)
    
-2. **Check Redstone Control**:
-   - Server redstone should activate correct hopper/dropper
-   - Test manually: `redstone.setOutput("left", true)`
-   - Verify wiring from computer to hoppers/droppers
+2. **Check Peripheral Network**:
+   - Verify all chests are connected via wired modems and networking cables
+   - Check that denomination chests are detected: view server startup output
+   - Ensure OUTPUT chest and void chests are properly registered with marker papers
    
-3. **Check Currency Path**:
-   - Currency storage chest → hopper → void chest (server)
-   - Void chest (ATM) → conveyor belt → customer pickup
-   - Ensure hoppers are pointed in correct direction
-   
-4. **Check Currency Supply**:
+3. **Check Currency Supply**:
    - Ensure minted currency in server storage chest
    - Verify currency registered: check management console statistics
    - View currency database: `edit data/currency.json`
@@ -1011,8 +1005,7 @@ For issues, questions, or suggestions:
 - Physical currency is represented by in-game items with NBT tags
 - Always backup your `/data` directory regularly!
 - Keep your master password safe - it cannot be recovered if lost
-- Void chest frequencies are set in Create Utilities (not via redstone)
-- Redstone controls which hopper/dropper pushes items into which void chest
+- Void chest frequencies are set in Create Utilities GUI (place two items in frequency slots)
 - ATM authorization tokens should be kept secret and secure
 
 ---

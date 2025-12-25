@@ -65,9 +65,6 @@ config.atm = {
     -- Void chest frequency (unique for each ATM)
     frequency = nil,  -- Must be set for each ATM
     
-    -- Dispense configuration
-    dispenseSide = "back",  -- Side where dispensed items come out
-    
     -- UI configuration
     displayName = "CC-Bank ATM",
     welcomeMessage = "Welcome to CC-Bank",
