@@ -113,8 +113,9 @@ saveBtn.onClick = function()
     end
     
     local passData = crypto.hashPassword(pass)
+    -- Encode salt as base64 for safe JSON storage
     config.management.masterPasswordHash = passData.hash
-    config.management.masterPasswordSalt = passData.salt
+    config.management.masterPasswordSalt = crypto.base64Encode(passData.salt)
     config.save()
     
     statusLabel:setText("Setup complete! Proceeding to login...")
@@ -161,7 +162,10 @@ loginBtn.onClick = function()
     -- Reload config to ensure we have latest hash
     config.load()
     
-    if crypto.verifyPassword(password, config.management.masterPasswordHash, config.management.masterPasswordSalt) then
+    -- Decode salt from base64
+    local salt = crypto.base64Decode(config.management.masterPasswordSalt)
+    
+    if crypto.verifyPassword(password, config.management.masterPasswordHash, salt) then
         authenticated = true
         loginPasswordInput:setText("")  -- Clear on success
         loginStatusLabel:setText("")
