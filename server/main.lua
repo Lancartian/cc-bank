@@ -435,32 +435,6 @@ end
 
 -- Main server loop
 local function serverLoop()
-        end
-        
-        -- Input side: Select denomination chest
-        redstone.setAnalogOutput(inputSide, denomIndex)
-        sleep(0.5)  -- Allow redstone routing to switch
-        
-        -- Pulse to transfer items (Create mod handles the actual item transfer)
-        -- The hopper/dropper system pulls from the selected denomination chest
-        -- and pushes into the selected ATM void chest
-        sleep(1.5)  -- Time for items to transfer
-        
-        totalDispensed = totalDispensed + group.value
-        print("  Dispensed " .. group.count .. "x $" .. denom .. " bills (" .. group.value .. " Credits)")
-    end
-    
-    -- Reset redstone signals
-    redstone.setAnalogOutput(inputSide, 0)
-    redstone.setAnalogOutput(outputSide, 0)
-    
-    print("Total dispensed: $" .. totalDispensed .. " to ATM " .. atmID .. " (Frequency: " .. frequency .. ")")
-    
-    return true, nil
-end
-
--- Main server loop
-local function serverLoop()
     while true do
         local message, distance = network.receive(config.server.port, 1)
         
