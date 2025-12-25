@@ -113,7 +113,8 @@ local serverFiles = {
     "server/main.lua",
     "server/accounts.lua",
     "server/currency.lua",
-    "server/transactions.lua"
+    "server/transactions.lua",
+    "server/network_storage.lua"
 }
 
 local managementFiles = {
