@@ -117,6 +117,17 @@ local function getDenominationFromChest(chest)
             if detail and detail.displayName then
                 local displayName = detail.displayName
                 
+                -- Skip if this is an ATM chest (contains "ATM" keyword)
+                if string.find(string.upper(displayName), "ATM") then
+                    return nil
+                end
+                
+                -- Skip if this is MINT or OUTPUT
+                local upper = string.upper(displayName)
+                if string.find(upper, "MINT") or string.find(upper, "OUTPUT") then
+                    return nil
+                end
+                
                 -- Extract all numbers from the display name
                 -- This allows flexible naming like "100 dollar bill", "my 50 note", "5credits", etc.
                 for number in string.gmatch(displayName, "%d+") do

@@ -372,9 +372,9 @@ handlers[network.MSG.CURRENCY_MINT] = function(message, sender)
         end
         
         return network.successResponse({
-            totalAmount = result.totalValue,
-            processedCount = result.totalBooks,
-            denominationBreakdown = result.breakdown
+            totalAmount = result.totalAmount,
+            processedCount = result.processedCount,
+            denominationBreakdown = result.mintedByDenom
         })
     else
         -- Legacy manual minting (kept for compatibility)
