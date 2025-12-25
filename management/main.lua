@@ -12,6 +12,7 @@ config.load()
 
 -- State
 local authenticated = false
+local managementToken = nil
 local statusMessage = ""
 local messageColor = colors.white
 
@@ -37,7 +38,7 @@ end
 
 -- Utility function to communicate with server
 local function sendToServer(msgType, data)
-    local message = network.createMessage(msgType, data)
+    local message = network.createMessage(msgType, data, managementToken)
     network.broadcast(modem, config.server.port, message)
     
     local response, err = network.receive(config.management.port, 5)
@@ -167,13 +168,32 @@ loginBtn.onClick = function()
     
     if crypto.verifyPassword(password, config.management.masterPasswordHash, salt) then
         authenticated = true
-        loginPasswordInput:setText("")  -- Clear on success
-        loginStatusLabel:setText("")
-        loginStatusLabel.style.fgColor = colors.white
         
-        -- Clear focus before transitioning
-        app:setFocus(nil)
-        showScreen("main")
+        -- Authenticate with server to get management session token
+        local authMessage = network.createMessage(network.MSG.MGMT_LOGIN, {
+            password = password
+        })
+        network.broadcast(modem, config.server.port, authMessage)
+        
+        local response, err = network.receive(config.management.port, 5)
+        if response and response.type == network.MSG.SUCCESS then
+            managementToken = response.data.token
+            
+            loginPasswordInput:setText("")  -- Clear on success
+            loginStatusLabel:setText("")
+            loginStatusLabel.style.fgColor = colors.white
+            
+            -- Clear focus before transitioning
+            app:setFocus(nil)
+            showScreen("main")
+        else
+            -- Local auth passed but server auth failed
+            authenticated = false
+            loginStatusLabel:setText("Server authentication failed")
+            loginStatusLabel.style.fgColor = colors.red
+            loginPasswordInput:setText("")
+            root:markDirty()
+        end
     else
         loginStatusLabel:setText("Invalid password")
         loginStatusLabel.style.fgColor = colors.red

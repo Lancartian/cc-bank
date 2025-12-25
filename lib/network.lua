@@ -43,7 +43,10 @@ network.MSG = {
     
     -- ATM specific
     ATM_REGISTER = "ATM_REG",
-    ATM_STATUS = "ATM_STATUS"
+    ATM_STATUS = "ATM_STATUS",
+    
+    -- Management console
+    MGMT_LOGIN = "MGMT_LOGIN"
 }
 
 -- Open modem on specified port

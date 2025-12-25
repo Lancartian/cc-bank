@@ -39,6 +39,7 @@ local encryptionKey = config.security.encryptionKey
 local sessions = {}  -- token -> session data
 local atmRegistry = {}  -- atmID -> {frequency, lastPing, online, authorized}
 local messageNonces = {}  -- Track nonces to prevent replay attacks
+local managementSessions = {}  -- token -> {created, lastActivity, computerID}
 
 -- Initialize modem
 local modem = network.init(config.server.port)
@@ -90,6 +91,22 @@ local function endSession(token)
     sessions[token] = nil
 end
 
+local function validateManagementSession(token)
+    local session = managementSessions[token]
+    if not session then
+        return nil, "invalid_management_session"
+    end
+    
+    local now = os.epoch("utc")
+    if now - session.lastActivity > (config.server.sessionTimeout * 1000) then
+        managementSessions[token] = nil
+        return nil, "session_expired"
+    end
+    
+    session.lastActivity = now
+    return session, nil
+end
+
 -- Message handlers
 local handlers = {}
 
@@ -98,6 +115,40 @@ handlers[network.MSG.PING] = function(message, sender)
     return network.createMessage(network.MSG.PONG, {
         serverID = os.getComputerID(),
         timestamp = os.epoch("utc")
+    })
+end
+
+-- Management console login
+handlers[network.MSG.MGMT_LOGIN] = function(message, sender)
+    local password = message.data.password
+    
+    if not password then
+        return network.errorResponse("missing_fields", "Password required")
+    end
+    
+    -- Verify against management master password
+    if not config.management.masterPasswordHash then
+        return network.errorResponse("not_configured", "Management password not set")
+    end
+    
+    local salt = crypto.base64Decode(config.management.masterPasswordSalt)
+    if not crypto.verifyPassword(password, config.management.masterPasswordHash, salt) then
+        return network.errorResponse("auth_failed", "Invalid password")
+    end
+    
+    -- Create management session
+    local token = crypto.generateToken()
+    managementSessions[token] = {
+        created = os.epoch("utc"),
+        lastActivity = os.epoch("utc"),
+        computerID = sender
+    }
+    
+    print("Management console authenticated from computer #" .. tostring(sender))
+    
+    return network.successResponse({
+        token = token,
+        serverTime = os.epoch("utc")
     })
 end
 
@@ -362,6 +413,12 @@ end
 
 -- Currency minting with automatic sorting
 handlers[network.MSG.CURRENCY_MINT] = function(message, sender)
+    -- Require management authentication
+    local mgmtSession, err = validateManagementSession(message.token)
+    if not mgmtSession then
+        return network.errorResponse("unauthorized", err or "Management authentication required")
+    end
+    
     local autoSort = message.data.autoSort
     
     if autoSort then
@@ -515,6 +572,13 @@ local function serverLoop()
         for token, session in pairs(sessions) do
             if now - session.lastActivity > (config.server.sessionTimeout * 1000) then
                 sessions[token] = nil
+            end
+        end
+        
+        -- Clean up expired management sessions
+        for token, session in pairs(managementSessions) do
+            if now - session.lastActivity > (config.server.sessionTimeout * 1000) then
+                managementSessions[token] = nil
             end
         end
         
