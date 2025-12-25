@@ -162,13 +162,13 @@ root:addChild(loginScreen)
 local usernameLabel = sgl.Label:new(2, 1, "Username:", 43)
 loginScreen:addChild(usernameLabel)
 
-local usernameInput = sgl.Input:new(2, 2, 43)
+local usernameInput = sgl.Input:new(2, 2, 43, 1)
 loginScreen:addChild(usernameInput)
 
 local passwordLabel = sgl.Label:new(2, 4, "Password:", 43)
 loginScreen:addChild(passwordLabel)
 
-local passwordInput = sgl.Input:new(2, 5, 43)
+local passwordInput = sgl.Input:new(2, 5, 43, 1)
 passwordInput:setMasked(true)
 loginScreen:addChild(passwordInput)
 
@@ -381,7 +381,7 @@ withdrawScreen:addChild(withdrawBalanceLabel)
 local withdrawAmountLabel = sgl.Label:new(2, 5, "Amount to withdraw:", 43)
 withdrawScreen:addChild(withdrawAmountLabel)
 
-local withdrawAmountInput = sgl.Input:new(2, 6, 43)
+local withdrawAmountInput = sgl.Input:new(2, 6, 43, 1)
 withdrawScreen:addChild(withdrawAmountInput)
 
 local withdrawStatusLabel = sgl.Label:new(2, 13, "", 43)
@@ -463,7 +463,7 @@ depositScreen:addChild(depositInfoLabel)
 local depositAmountLabel = sgl.Label:new(2, 6, "Amount to deposit:", 43)
 depositScreen:addChild(depositAmountLabel)
 
-local depositAmountInput = sgl.Input:new(2, 7, 43)
+local depositAmountInput = sgl.Input:new(2, 7, 43, 1)
 depositScreen:addChild(depositAmountInput)
 
 local depositStatusLabel = sgl.Label:new(2, 13, "", 43)
@@ -545,13 +545,13 @@ transferScreen:addChild(transferBalanceLabel)
 local transferAccountLabel = sgl.Label:new(2, 5, "To Account Number:", 43)
 transferScreen:addChild(transferAccountLabel)
 
-local transferAccountInput = sgl.Input:new(2, 6, 43)
+local transferAccountInput = sgl.Input:new(2, 6, 43, 1)
 transferScreen:addChild(transferAccountInput)
 
 local transferAmountLabel = sgl.Label:new(2, 8, "Amount:", 43)
 transferScreen:addChild(transferAmountLabel)
 
-local transferAmountInput = sgl.Input:new(2, 9, 43)
+local transferAmountInput = sgl.Input:new(2, 9, 43, 1)
 transferScreen:addChild(transferAmountInput)
 
 local transferStatusLabel = sgl.Label:new(2, 14, "", 43)

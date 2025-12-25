@@ -77,14 +77,14 @@ setupScreen:addChild(label1)
 local label2 = sgl.Label:new(2, 4, "Password:", 43)
 setupScreen:addChild(label2)
 
-local passwordInput = sgl.Input:new(2, 5, 40)
+local passwordInput = sgl.Input:new(2, 5, 40, 1)
 passwordInput:setMasked(true)
 setupScreen:addChild(passwordInput)
 
 local label3 = sgl.Label:new(2, 7, "Confirm Password:", 43)
 setupScreen:addChild(label3)
 
-local confirmInput = sgl.Input:new(2, 8, 40)
+local confirmInput = sgl.Input:new(2, 8, 40, 1)
 confirmInput:setMasked(true)
 setupScreen:addChild(confirmInput)
 
@@ -139,7 +139,7 @@ loginScreen:addChild(titleLabel)
 local passLabel = sgl.Label:new(2, 5, "Master Password:", 43)
 loginScreen:addChild(passLabel)
 
-local loginPasswordInput = sgl.Input:new(2, 6, 40)
+local loginPasswordInput = sgl.Input:new(2, 6, 40, 1)
 loginPasswordInput:setMasked(true)
 loginScreen:addChild(loginPasswordInput)
 
@@ -268,7 +268,7 @@ currencyScreen:addChild(currencyInfo)
 local amountLabel = sgl.Label:new(2, 5, "Amount to mint:", 43)
 currencyScreen:addChild(amountLabel)
 
-local amountInput = sgl.Input:new(2, 6, 40)
+local amountInput = sgl.Input:new(2, 6, 40, 1)
 amountInput:setText("100")
 currencyScreen:addChild(amountInput)
 
@@ -355,13 +355,13 @@ authorizeATMScreen:addChild(authTitle)
 local idLabel = sgl.Label:new(2, 3, "ATM ID:", 43)
 authorizeATMScreen:addChild(idLabel)
 
-local idInput = sgl.Input:new(2, 4, 40)
+local idInput = sgl.Input:new(2, 4, 40, 1)
 authorizeATMScreen:addChild(idInput)
 
 local freqLabel = sgl.Label:new(2, 6, "Void Chest Frequency:", 43)
 authorizeATMScreen:addChild(freqLabel)
 
-local freqInput = sgl.Input:new(2, 7, 43)
+local freqInput = sgl.Input:new(2, 7, 43, 1)
 authorizeATMScreen:addChild(freqInput)
 
 local authStatusLabel = sgl.Label:new(2, 9, "", 43)
