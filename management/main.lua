@@ -456,7 +456,7 @@ authBtn.onClick = function()
         return
     end
     
-    local token = crypto.generateToken()
+    local token = crypto.generateATMToken()
     config.management.authorizedATMs[atmID] = {
         token = token,
         authorized = os.epoch("utc")

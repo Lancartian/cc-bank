@@ -212,6 +212,25 @@ function crypto.generateToken()
     return crypto.sha256(tostring(timestamp) .. random)
 end
 
+-- Generate short, memorable ATM token (8 characters: XXXX-XXXX)
+function crypto.generateATMToken()
+    local chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  -- Exclude similar chars: 0/O, 1/I
+    local token = {}
+    
+    for i = 1, 8 do
+        local randomByte = string.byte(crypto.random(1))
+        local index = (randomByte % #chars) + 1
+        token[i] = string.sub(chars, index, index)
+        
+        -- Add dash after 4th character
+        if i == 4 then
+            token[i + 1] = "-"
+        end
+    end
+    
+    return table.concat(token)
+end
+
 -- Hash password with salt
 function crypto.hashPassword(password, salt)
     salt = salt or crypto.random(16)
