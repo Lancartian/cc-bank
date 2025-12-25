@@ -73,9 +73,17 @@ installer install
 ### 2. Download CC-Bank
 
 Option A - Using wget (recommended):
-```
+```lua
+-- Download and run installer
 wget run https://raw.githubusercontent.com/Lancartian/cc-bank/main/install.lua
 ```
+
+The installer will:
+- Check for and install CC-SGL if needed
+- Ask which component to install (all, server, management, or ATM)
+- Create necessary directories
+- Download all required files
+- Provide setup instructions
 
 Option B - Manual installation:
 1. Download all files from this repository
