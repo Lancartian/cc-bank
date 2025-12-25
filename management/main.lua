@@ -81,11 +81,15 @@ local function firstRunSetup()
             
             if pass ~= confirm then
                 showMessage("Passwords do not match", true)
+                -- Recreate the panel to show error
+                firstRunSetup()
                 return
             end
             
             if #pass < 8 then
                 showMessage("Password too short (min 8 chars)", true)
+                -- Recreate the panel to show error
+                firstRunSetup()
                 return
             end
             
@@ -98,6 +102,7 @@ local function firstRunSetup()
             authenticated = false
             currentScreen = "login"
             screens.login()
+            app:draw()
         end
         setupPanel:addChild(saveBtn)
         
