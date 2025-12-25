@@ -176,7 +176,26 @@ loginBtn.onClick = function()
         network.broadcast(modem, config.server.port, authMessage)
         
         local response, err = network.receive(config.management.port, 5)
-        if response and response.type == network.MSG.SUCCESS then
+        
+        if not response then
+            authenticated = false
+            loginStatusLabel:setText("No response from server: " .. tostring(err))
+            loginStatusLabel.style.fgColor = colors.red
+            loginPasswordInput:setText("")
+            root:markDirty()
+            return
+        end
+        
+        if response.type == network.MSG.ERROR then
+            authenticated = false
+            loginStatusLabel:setText("Auth error: " .. tostring(response.data.message))
+            loginStatusLabel.style.fgColor = colors.red
+            loginPasswordInput:setText("")
+            root:markDirty()
+            return
+        end
+        
+        if response.type == network.MSG.SUCCESS and response.data and response.data.token then
             managementToken = response.data.token
             
             loginPasswordInput:setText("")  -- Clear on success

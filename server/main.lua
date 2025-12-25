@@ -607,7 +607,28 @@ local function serverLoop()
             if handler then
                 local response = handler(message, distance)
                 if response then
-                    network.broadcast(modem, config.server.port, response)
+                    -- Determine which port to send response to based on message type
+                    local responsePort = config.server.port
+                    
+                    -- Management console messages get responses on management port
+                    if message.type == network.MSG.MGMT_LOGIN or 
+                       message.type == network.MSG.CURRENCY_MINT or
+                       message.type == network.MSG.ACCOUNT_CREATE or
+                       message.type == network.MSG.ACCOUNT_LIST or
+                       message.type == network.MSG.ACCOUNT_DELETE then
+                        responsePort = config.management.port
+                    -- ATM messages get responses on ATM port  
+                    elseif message.type == network.MSG.ATM_REGISTER or
+                           message.type == network.MSG.ATM_STATUS or
+                           message.type == network.MSG.AUTH_REQUEST or
+                           message.type == network.MSG.BALANCE_CHECK or
+                           message.type == network.MSG.WITHDRAW or
+                           message.type == network.MSG.DEPOSIT or
+                           message.type == network.MSG.TRANSFER then
+                        responsePort = config.atm.port
+                    end
+                    
+                    network.broadcast(modem, responsePort, response)
                 end
             else
                 print("Unknown message type: " .. tostring(message.type))
