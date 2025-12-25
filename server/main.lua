@@ -201,18 +201,9 @@ end
 
 -- Authentication
 handlers[network.MSG.AUTH_REQUEST] = function(message, sender)
-    -- Decrypt credentials if encrypted
-    local data = message.data
-    if message.data.isEncrypted then
-        local success, decrypted = network.verifyMessage(message, encryptionKey, encryptionKey)
-        if not success then
-            return network.errorResponse("decryption_failed", "Could not decrypt credentials")
-        end
-        data = decrypted
-    end
-    
-    local username = data.username
-    local password = data.password
+    -- Get credentials from message
+    local username = message.data.username
+    local password = message.data.password
     
     if not username or not password then
         return network.errorResponse("missing_fields", "Username and password required")

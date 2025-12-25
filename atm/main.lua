@@ -231,11 +231,11 @@ loginBtn.onClick = function()
     loginStatusLabel.style.fgColor = colors.white
     root:markDirty()
     
-    -- Create encrypted authentication request
+    -- Create authentication request (not encrypted - no shared key yet)
     local message = network.createMessage(network.MSG.AUTH_REQUEST, {
         username = user,
         password = pass
-    }, nil, encryptionKey)
+    })
     
     network.broadcast(modem, config.server.port, message)
     
@@ -255,22 +255,28 @@ loginBtn.onClick = function()
         return
     end
     
-    -- Decrypt response
-    local success, data = network.verifyMessage(response, encryptionKey, encryptionKey)
-    if not success then
-        loginStatusLabel:setText("Security error")
-        loginStatusLabel.style.fgColor = colors.red
-        root:markDirty()
-        return
+    -- Response may be encrypted - try to decrypt if encryption key available
+    local responseData = response.data
+    if response.data.isEncrypted and response.data.encrypted then
+        -- Try to decrypt with encryption key from registration
+        if encryptionKey then
+            local success, data = network.verifyMessage(response, encryptionKey, encryptionKey)
+            if success then
+                responseData = data
+            end
+        end
     end
     
-    local response = data or response.data
-    
-    if response and response.success then
-        sessionToken = response.token
-        accountNumber = response.accountNumber
-        username = response.username
-        balance = response.balance
+    if responseData and responseData.success then
+        sessionToken = responseData.token
+        accountNumber = responseData.accountNumber
+        username = responseData.username
+        balance = responseData.balance
+        
+        -- Update encryption key if provided
+        if responseData.encryptionKey then
+            encryptionKey = responseData.encryptionKey
+        end
         
         currentScreen = "menu"
         showScreen("menu")
