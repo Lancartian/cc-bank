@@ -505,7 +505,7 @@ end
 authorizeATMScreen:addChild(authBtn)
 
 local authBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
-authorBackBtn.onClick = function()
+authBackBtn.onClick = function()
     showScreen("atm")
 end
 authorizeATMScreen:addChild(authBackBtn)
