@@ -60,76 +60,66 @@ local function showScreen(screenName)
     root:markDirty()
 end
 
--- First run setup check
-if not config.management.masterPasswordHash then
-    -- First run setup screen
-    local setupScreen = sgl.Panel:new(2, 2, 47, 15)
-    setupScreen:setBorder(false)
-    setupScreen.data = {isScreen = true, screenName = "setup"}
-    root:addChild(setupScreen)
+-- First run setup screen
+local setupScreen = sgl.Panel:new(2, 2, 47, 15)
+setupScreen:setBorder(false)
+setupScreen.data = {isScreen = true, screenName = "setup"}
+root:addChild(setupScreen)
+
+local label1 = sgl.Label:new(2, 2, "Create Master Password")
+label1.style.fgColor = colors.yellow
+setupScreen:addChild(label1)
+
+local label2 = sgl.Label:new(2, 4, "Password:")
+setupScreen:addChild(label2)
+
+local passwordInput = sgl.Input:new(2, 5, 40)
+passwordInput:setMasked(true)
+setupScreen:addChild(passwordInput)
+
+local label3 = sgl.Label:new(2, 7, "Confirm Password:")
+setupScreen:addChild(label3)
+
+local confirmInput = sgl.Input:new(2, 8, 40)
+confirmInput:setMasked(true)
+setupScreen:addChild(confirmInput)
+
+local statusLabel = sgl.Label:new(2, 10, "")
+statusLabel.style.fgColor = colors.red
+setupScreen:addChild(statusLabel)
+
+local saveBtn = sgl.Button:new(10, 12, 25, 2, "Save & Continue")
+saveBtn.style.bgColor = colors.green
+saveBtn.onClick = function()
+    local pass = passwordInput:getText()
+    local confirm = confirmInput:getText()
     
-    local label1 = sgl.Label:new(2, 2, "Create Master Password")
-    label1.style.fgColor = colors.yellow
-    setupScreen:addChild(label1)
-    
-    local label2 = sgl.Label:new(2, 4, "Password:")
-    setupScreen:addChild(label2)
-    
-    local passwordInput = sgl.Input:new(2, 5, 40)
-    passwordInput:setMasked(true)
-    setupScreen:addChild(passwordInput)
-    
-    local label3 = sgl.Label:new(2, 7, "Confirm Password:")
-    setupScreen:addChild(label3)
-    
-    local confirmInput = sgl.Input:new(2, 8, 40)
-    confirmInput:setMasked(true)
-    setupScreen:addChild(confirmInput)
-    
-    local statusLabel = sgl.Label:new(2, 10, "")
-    statusLabel.style.fgColor = colors.red
-    setupScreen:addChild(statusLabel)
-    
-    local saveBtn = sgl.Button:new(10, 12, 25, 2, "Save & Continue")
-    saveBtn.style.bgColor = colors.green
-    saveBtn.onClick = function()
-        local pass = passwordInput:getText()
-        local confirm = confirmInput:getText()
-        
-        if pass ~= confirm then
-            statusLabel:setText("Passwords do not match")
-            statusLabel.style.fgColor = colors.red
-            root:markDirty()
-            return
-        end
-        
-        if #pass < 8 then
-            statusLabel:setText("Password too short (min 8 chars)")
-            statusLabel.style.fgColor = colors.red
-            root:markDirty()
-            return
-        end
-        
-        local passData = crypto.hashPassword(pass)
-        config.management.masterPasswordHash = passData.hash
-        config.management.masterPasswordSalt = passData.salt
-        config.save()
-        
-        statusLabel:setText("Setup complete! Please restart.")
-        statusLabel.style.fgColor = colors.green
+    if pass ~= confirm then
+        statusLabel:setText("Passwords do not match")
+        statusLabel.style.fgColor = colors.red
         root:markDirty()
-        sleep(2)
-        app:stop()
+        return
     end
-    setupScreen:addChild(saveBtn)
     
-    -- Set root and run
-    app:setRoot(root)
-    app:setFocus(passwordInput)
-    showScreen("setup")
-    app:run()
-    return
+    if #pass < 8 then
+        statusLabel:setText("Password too short (min 8 chars)")
+        statusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    local passData = crypto.hashPassword(pass)
+    config.management.masterPasswordHash = passData.hash
+    config.management.masterPasswordSalt = passData.salt
+    config.save()
+    
+    statusLabel:setText("Setup complete! Proceeding to login...")
+    statusLabel.style.fgColor = colors.green
+    root:markDirty()
+    sleep(1)
+    showScreen("login")
 end
+setupScreen:addChild(saveBtn)
 
 -- Login screen
 local loginScreen = sgl.Panel:new(2, 2, 47, 15)
@@ -452,8 +442,18 @@ listAccountsScreen:addChild(listAccBackBtn)
 
 -- Set root and run
 app:setRoot(root)
-app:setFocus(loginPasswordInput)
-showScreen("login")
+
+-- Determine initial screen and focus
+if not config.management.masterPasswordHash then
+    -- First run - show setup
+    app:setFocus(passwordInput)
+    showScreen("setup")
+else
+    -- Normal run - show login
+    app:setFocus(loginPasswordInput)
+    showScreen("login")
+end
+
 app:run()
 
 -- Cleanup
