@@ -596,7 +596,7 @@ createAccountScreen:addChild(balanceInput)
 local createAccStatusLabel = sgl.Label:new(2, 12, "", 43)
 createAccountScreen:addChild(createAccStatusLabel)
 
-local createAccBtn = sgl.Button:new(10, 14, 25, 1, "Create Account")
+local createAccBtn = sgl.Button:new(10, 13, 25, 1, "Create Account")
 createAccBtn.style.bgColor = colors.green
 createAccBtn.onClick = function()
     local user = usernameInput:getText()

@@ -158,6 +158,9 @@ local function showScreen(screenName)
             child:setVisible(child.data.screenName == screenName)
         end
     end
+    if screenName == "menu" and updateMenuLabels then
+        updateMenuLabels()
+    end
     root:markDirty()
 end
 
@@ -270,11 +273,6 @@ loginBtn.onClick = function()
         balance = response.balance
         
         currentScreen = "menu"
-        
-        -- Update welcome label and balance label on menu screen
-        welcomeLabel:setText("Welcome, " .. username)
-        balanceLabel:setText("Balance: " .. balance .. " " .. config.currency.displayNamePlural)
-        
         showScreen("menu")
     else
         loginStatusLabel:setText("Login failed: " .. tostring(err))
@@ -309,6 +307,15 @@ menuScreen:addChild(welcomeLabel)
 local balanceLabel = sgl.Label:new(2, 2, "Balance: 0", 43)
 balanceLabel.style.fgColor = colors.lightBlue
 menuScreen:addChild(balanceLabel)
+
+-- Function to update menu labels
+local function updateMenuLabels()
+    if username then
+        welcomeLabel:setText("Welcome, " .. username)
+        balanceLabel:setText("Balance: " .. balance .. " " .. config.currency.displayNamePlural)
+        root:markDirty()
+    end
+end
     
 local btnWidth = 38
 local btnHeight = 2
@@ -316,6 +323,21 @@ local btnX = 5
 
 local checkBalanceBtn = sgl.Button:new(btnX, 5, btnWidth, btnHeight, "Check Balance")
 checkBalanceBtn.onClick = function()
+    -- Fetch latest balance
+    local response, err = sendToServer(network.MSG.BALANCE_CHECK, {}, true)
+    
+    if response then
+        balance = response.balance
+        balanceDisplayLabel:setText(tostring(balance) .. " " .. config.currency.displayNamePlural)
+        balanceDisplayLabel.style.fgColor = colors.green
+        accountDisplayLabel:setText("Account: " .. accountNumber)
+        accountDisplayLabel.style.fgColor = colors.white
+    else
+        balanceDisplayLabel:setText("Error: " .. tostring(err))
+        balanceDisplayLabel.style.fgColor = colors.red
+        accountDisplayLabel:setText("")
+    end
+    root:markDirty()
     showScreen("checkBalance")
 end
 menuScreen:addChild(checkBalanceBtn)
@@ -345,7 +367,7 @@ transferBtn.onClick = function()
 end
 menuScreen:addChild(transferBtn)
 
-local logoutBtn = sgl.Button:new(2, 17, 15, 1, "Logout")
+local logoutBtn = sgl.Button:new(2, 13, 15, 1, "Logout")
 logoutBtn.style.bgColor = colors.red
 logoutBtn.onClick = function()
     sessionToken = nil
@@ -378,24 +400,9 @@ checkBalanceScreen:addChild(balanceDisplayLabel)
 local accountDisplayLabel = sgl.Label:new(2, 7, "", 43)
 checkBalanceScreen:addChild(accountDisplayLabel)
 
-local balanceBackBtn = sgl.Button:new(12, 11, 20, 3, "Back to Menu")
+local balanceBackBtn = sgl.Button:new(12, 10, 20, 2, "Back to Menu")
 balanceBackBtn.onClick = function()
-    -- Fetch latest balance
-    local response, err = sendToServer(network.MSG.BALANCE_CHECK, {}, true)
-    
-    if response then
-        balance = response.balance
-        balanceDisplayLabel:setText(tostring(balance) .. " " .. config.currency.displayNamePlural)
-        balanceDisplayLabel.style.fgColor = colors.green
-        accountDisplayLabel:setText("Account: " .. accountNumber)
-        accountDisplayLabel.style.fgColor = colors.white
-    else
-        balanceDisplayLabel:setText("Error: " .. tostring(err))
-        balanceDisplayLabel.style.fgColor = colors.red
-        accountDisplayLabel:setText("")
-    end
-    root:markDirty()
-    sleep(2)
+    updateMenuLabels()
     showScreen("menu")
 end
 checkBalanceScreen:addChild(balanceBackBtn)
@@ -420,10 +427,10 @@ withdrawScreen:addChild(withdrawAmountLabel)
 local withdrawAmountInput = sgl.Input:new(2, 6, 43, 1)
 withdrawScreen:addChild(withdrawAmountInput)
 
-local withdrawStatusLabel = sgl.Label:new(2, 13, "", 43)
+local withdrawStatusLabel = sgl.Label:new(2, 8, "", 43)
 withdrawScreen:addChild(withdrawStatusLabel)
 
-local withdrawBtn = sgl.Button:new(8, 9, 30, 3, "Withdraw")
+local withdrawBtn = sgl.Button:new(8, 10, 30, 2, "Withdraw")
 withdrawBtn.style.bgColor = colors.orange
 withdrawBtn.onClick = function()
     local amount = tonumber(withdrawAmountInput:getText())
@@ -462,7 +469,7 @@ withdrawBtn.onClick = function()
         balance = response.newBalance
         withdrawStatusLabel:setText("Withdrawal successful!")
         withdrawStatusLabel.style.fgColor = colors.green
-        balanceLabel:setText("Balance: " .. balance .. " " .. config.currency.displayNamePlural)
+        updateMenuLabels()
         root:markDirty()
         
         -- Wait for currency to be dispensed
@@ -546,7 +553,7 @@ depositConfirmBtn.onClick = function()
         balance = response.newBalance
         depositStatusLabel:setText("Deposit successful!")
         depositStatusLabel.style.fgColor = colors.green
-        balanceLabel:setText("Balance: " .. balance .. " " .. config.currency.displayNamePlural)
+        updateMenuLabels()
         root:markDirty()
         sleep(2)
         showScreen("menu")
@@ -590,10 +597,10 @@ transferScreen:addChild(transferAmountLabel)
 local transferAmountInput = sgl.Input:new(2, 9, 43, 1)
 transferScreen:addChild(transferAmountInput)
 
-local transferStatusLabel = sgl.Label:new(2, 14, "", 43)
+local transferStatusLabel = sgl.Label:new(2, 11, "", 43)
 transferScreen:addChild(transferStatusLabel)
 
-local transferConfirmBtn = sgl.Button:new(8, 12, 30, 3, "Transfer")
+local transferConfirmBtn = sgl.Button:new(8, 10, 30, 1, "Transfer")
 transferConfirmBtn.style.bgColor = colors.blue
 transferConfirmBtn.onClick = function()
     local toAccount = transferAccountInput:getText()
@@ -640,7 +647,7 @@ transferConfirmBtn.onClick = function()
         balance = response.newBalance
         transferStatusLabel:setText("Transfer successful!")
         transferStatusLabel.style.fgColor = colors.green
-        balanceLabel:setText("Balance: " .. balance .. " " .. config.currency.displayNamePlural)
+        updateMenuLabels()
         root:markDirty()
         sleep(2)
         showScreen("menu")
@@ -652,7 +659,7 @@ transferConfirmBtn.onClick = function()
 end
 transferScreen:addChild(transferConfirmBtn)
 
-local transferCancelBtn = sgl.Button:new(8, 16, 30, 2, "Cancel")
+local transferCancelBtn = sgl.Button:new(8, 13, 30, 1, "Cancel")
 transferCancelBtn.onClick = function()
     showScreen("menu")
 end
