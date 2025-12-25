@@ -7,6 +7,7 @@ local crypto = require("lib.crypto")
 local accounts = require("server.accounts")
 local currency = require("server.currency")
 local transactions = require("server.transactions")
+local networkStorage = require("server.network_storage")
 
 -- Initialize configuration
 config.init()
@@ -17,6 +18,20 @@ if not config.security.encryptionKey then
     config.security.encryptionKey = crypto.sha256(crypto.random(32) .. os.epoch("utc"))
     config.save()
 end
+
+-- Scan network for chests
+print("\nScanning peripheral network...")
+if not networkStorage.scanNetwork() then
+    print("WARNING: No chests found on network!")
+    print("Make sure chests are connected via wired modems")
+end
+
+local storageStatus = networkStorage.getStatus()
+print("\nNetwork Storage Status:")
+print("  MINT chest: " .. (storageStatus.mintChest and "OK" or "NOT FOUND"))
+print("  OUTPUT chest: " .. (storageStatus.outputChest and "OK" or "NOT FOUND"))
+print("  Denomination chests: " .. storageStatus.denominationChestCount)
+print("  Total chests: " .. storageStatus.totalChests)
 
 local encryptionKey = config.security.encryptionKey
 
@@ -345,10 +360,12 @@ handlers[network.MSG.CURRENCY_VERIFY] = function(message, sender)
     })
 end
 
--- Currency dispensing with redstone control for hopper/dropper selection
--- Note: Void chest frequencies are set in Create Utilities GUI (not via redstone)
--- Redstone controls which hopper/dropper pushes items into which void chest
-local function dispenseToATM(atmID, items)
+-- Currency dispensing using peripheral network and void chests
+-- Process:
+-- 1. currency.prepareDispense() moves bills from denomination chests to OUTPUT chest
+-- 2. This function transfers items from OUTPUT chest to ATM's void chest
+-- 3. Void chest frequency matching handles wireless transfer to ATM location
+local function dispenseToATM(atmID, amount)
     if not atmRegistry[atmID] then
         return false, "atm_not_registered"
     end
@@ -359,28 +376,85 @@ local function dispenseToATM(atmID, items)
     
     local frequency = atmRegistry[atmID].frequency
     
-    -- Activate redstone to control the hopper/dropper that pushes items
-    -- into the void chest matching this ATM's frequency
-    -- Server has multiple void chests, each with unique frequency
-    -- ATM has void chest with matching frequency for item transfer
-    local sides = {"left", "right", "front", "back", "top", "bottom"}
-    
-    if atmID > 6 then
-        print("ERROR: ATM ID " .. atmID .. " exceeds maximum of 6 ATMs")
-        return false, "atm_id_too_high"
-    end
-    
-    local side = sides[atmID]
-    if side then
-        redstone.setOutput(side, true)
-        sleep(2)  -- Keep active long enough to transfer items
-        redstone.setOutput(side, false)
-    else
-        print("ERROR: Invalid ATM ID " .. atmID)
+    -- Validate ATM ID range (1-16)
+    if atmID < 1 or atmID > 16 then
+        print("ERROR: ATM ID " .. atmID .. " out of range (1-16)")
         return false, "invalid_atm_id"
     end
     
-    print("Dispensed to ATM " .. atmID .. " (Frequency: " .. frequency .. ")")
+    -- Prepare currency - this moves bills to OUTPUT chest
+    local dispensed, err = currency.prepareDispense(amount, atmID)
+    if not dispensed then
+        print("ERROR: " .. (err or "Unknown error") .. " for ATM " .. atmID .. " withdrawal")
+        return false, err or "insufficient_currency"
+    end
+    
+    print("Currency prepared in OUTPUT chest:")
+    for _, bill in ipairs(dispensed.bills) do
+        print("  " .. bill.count .. "x $" .. bill.denomination .. " bills")
+    end
+    
+    -- Get OUTPUT chest and ATM void chest
+    local outputChest = networkStorage.getOutputChest()
+    if not outputChest then
+        print("ERROR: OUTPUT chest not found")
+        return false, "output_chest_not_configured"
+    end
+    
+    -- Get ATM's void chest from network storage
+    local atmVoidChestInfo = networkStorage.getVoidChest(atmID)
+    
+    if not atmVoidChestInfo then
+        print("ERROR: Void chest for ATM " .. atmID .. " not found on network")
+        print("       Place a paper renamed with 'ATM " .. atmID .. "' inside the void chest")
+        return false, "atm_void_chest_not_found"
+    end
+    
+    print("Transferring from OUTPUT chest to void chest: " .. atmVoidChestInfo.name)
+    
+    -- Transfer all items from OUTPUT chest to ATM void chest
+    local outputPeripheral = outputChest.peripheral
+    local totalTransferred = 0
+    
+    local items = outputPeripheral.list()
+    for slot, item in pairs(items) do
+        -- Skip marker slot
+        if slot ~= outputChest.markerSlot and item.name == config.currency.itemName then
+            -- Use pushItems to transfer to void chest
+            local moved = outputPeripheral.pushItems(atmVoidChestInfo.name, slot)
+            totalTransferred = totalTransferred + moved
+            print("  Transferred " .. moved .. " items from slot " .. slot)
+        end
+    end
+    
+    print("Total dispensed: $" .. amount .. " to ATM " .. atmID .. " (Frequency: " .. frequency .. ")")
+    print("  " .. totalTransferred .. " total bills transferred")
+    
+    return true, nil
+end
+
+-- Main server loop
+local function serverLoop()
+        end
+        
+        -- Input side: Select denomination chest
+        redstone.setAnalogOutput(inputSide, denomIndex)
+        sleep(0.5)  -- Allow redstone routing to switch
+        
+        -- Pulse to transfer items (Create mod handles the actual item transfer)
+        -- The hopper/dropper system pulls from the selected denomination chest
+        -- and pushes into the selected ATM void chest
+        sleep(1.5)  -- Time for items to transfer
+        
+        totalDispensed = totalDispensed + group.value
+        print("  Dispensed " .. group.count .. "x $" .. denom .. " bills (" .. group.value .. " Credits)")
+    end
+    
+    -- Reset redstone signals
+    redstone.setAnalogOutput(inputSide, 0)
+    redstone.setAnalogOutput(outputSide, 0)
+    
+    print("Total dispensed: $" .. totalDispensed .. " to ATM " .. atmID .. " (Frequency: " .. frequency .. ")")
     
     return true, nil
 end
