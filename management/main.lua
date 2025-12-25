@@ -165,6 +165,10 @@ loginBtn.onClick = function()
         authenticated = true
         loginPasswordInput:setText("")  -- Clear on success
         loginStatusLabel:setText("")
+        loginStatusLabel.style.fgColor = colors.white
+        
+        -- Clear focus before transitioning
+        app:setFocus(nil)
         showScreen("main")
     else
         loginStatusLabel:setText("Invalid password")
