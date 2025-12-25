@@ -211,10 +211,10 @@ local passwordInput = sgl.Input:new(2, 5, 43, 1)
 passwordInput:setMasked(true)
 loginScreen:addChild(passwordInput)
 
-local loginStatusLabel = sgl.Label:new(2, 13, "", 43)
+local loginStatusLabel = sgl.Label:new(2, 7, "", 43)
 loginScreen:addChild(loginStatusLabel)
 
-local loginBtn = sgl.Button:new(8, 8, 30, 3, "Login")
+local loginBtn = sgl.Button:new(8, 9, 30, 2, "Login")
 loginBtn.style.bgColor = colors.green
 loginBtn.onClick = function()
     local user = usernameInput:getText()
@@ -283,7 +283,7 @@ loginBtn.onClick = function()
 end
 loginScreen:addChild(loginBtn)
 
-local cancelBtn = sgl.Button:new(8, 12, 30, 2, "Cancel")
+local cancelBtn = sgl.Button:new(8, 12, 30, 1, "Cancel")
 cancelBtn.onClick = function()
     usernameInput:setText("")
     passwordInput:setText("")

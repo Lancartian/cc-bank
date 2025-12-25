@@ -67,6 +67,8 @@ local function showScreen(screenName)
         refreshATMList()
     elseif screenName == "listAccounts" and refreshAccountList then
         refreshAccountList()
+    elseif screenName == "stats" and refreshStats then
+        refreshStats()
     end
     
     root:markDirty()
@@ -369,14 +371,81 @@ local statsTitle = sgl.Label:new(10, 1, "System Statistics", 43)
 statsTitle.style.fgColor = colors.yellow
 statsScreen:addChild(statsTitle)
 
-local stat1 = sgl.Label:new(2, 3, "Total Accounts: 0", 43)
+local stat1 = sgl.Label:new(2, 3, "Loading...", 43)
 statsScreen:addChild(stat1)
 
-local stat2 = sgl.Label:new(2, 4, "Total Transactions: 0", 43)
+local stat2 = sgl.Label:new(2, 5, "", 43)
 statsScreen:addChild(stat2)
 
-local stat3 = sgl.Label:new(2, 5, "Currency Supply: 0 Credits", 43)
+local stat3 = sgl.Label:new(2, 7, "", 43)
 statsScreen:addChild(stat3)
+
+local stat4 = sgl.Label:new(2, 9, "", 43)
+statsScreen:addChild(stat4)
+
+local statsStatusLabel = sgl.Label:new(2, 11, "", 43)
+statsStatusLabel.style.fgColor = colors.gray
+statsScreen:addChild(statsStatusLabel)
+
+-- Function to refresh statistics
+local function refreshStats()
+    stat1:setText("Loading statistics...")
+    stat1.style.fgColor = colors.white
+    stat2:setText("")
+    stat3:setText("")
+    stat4:setText("")
+    statsStatusLabel:setText("")
+    root:markDirty()
+    
+    -- Get account list
+    local result, err = sendToServer(network.MSG.ACCOUNT_LIST, {})
+    
+    if result and result.accounts then
+        local totalAccounts = result.count or #result.accounts
+        local totalBalance = 0
+        local lockedCount = 0
+        
+        for _, acc in ipairs(result.accounts) do
+            totalBalance = totalBalance + (acc.balance or 0)
+            if acc.locked then
+                lockedCount = lockedCount + 1
+            end
+        end
+        
+        stat1:setText("Total Accounts: " .. totalAccounts)
+        stat1.style.fgColor = colors.white
+        stat2:setText("Total Balance: " .. totalBalance .. " Credits")
+        stat2.style.fgColor = colors.white
+        stat3:setText("Locked Accounts: " .. lockedCount)
+        stat3.style.fgColor = lockedCount > 0 and colors.yellow or colors.white
+        
+        -- Count authorized ATMs
+        local atmCount = 0
+        for _ in pairs(config.management.authorizedATMs or {}) do
+            atmCount = atmCount + 1
+        end
+        stat4:setText("Authorized ATMs: " .. atmCount)
+        stat4.style.fgColor = colors.white
+        
+        statsStatusLabel:setText("Last updated: " .. os.date("%H:%M:%S"))
+        statsStatusLabel.style.fgColor = colors.gray
+    else
+        stat1:setText("Error loading statistics")
+        stat1.style.fgColor = colors.red
+        stat2:setText("")
+        stat3:setText("")
+        stat4:setText("")
+        statsStatusLabel:setText(tostring(err))
+        statsStatusLabel.style.fgColor = colors.red
+    end
+    root:markDirty()
+end
+
+local statsRefreshBtn = sgl.Button:new(20, 13, 20, 2, "Refresh")
+statsRefreshBtn.onClick = function()
+    refreshStats()
+end
+statsScreen:addChild(statsRefreshBtn)
 
 local statsBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
 statsBackBtn.onClick = function()
