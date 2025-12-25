@@ -764,15 +764,6 @@ local function serverLoop()
         local message, distance = network.receive(config.server.port, 1)
         
         if message then
-            -- Check for replay attacks
-            if message.nonce then
-                if messageNonces[message.nonce] then
-                    print("WARNING: Replay attack detected - duplicate nonce")
-                else
-                    messageNonces[message.nonce] = os.epoch("utc")
-                end
-            end
-            
             -- Validate message signature if token present
             if message.token and config.security.requireMessageSignatures then
                 local valid, err = network.verifyMessage(message, message.token, encryptionKey)
