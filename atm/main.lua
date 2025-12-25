@@ -111,6 +111,9 @@ local root = sgl.Panel:new(1, 1, 51, 19)
 root:setTitle(config.atm.displayName)
 root:setBorder(true)
 
+-- Set root before adding children
+app:setRoot(root)
+
 -- Utility function to show screen
 local function showScreen(screenName)
     for i = 1, #root.children do
@@ -643,15 +646,12 @@ local function main()
             startStatusPing()
         end,
         function()
-            -- Set root and run
-            app:setRoot(root)
-            app:setFocus(usernameInput)
-            
             -- Update balance labels before showing screens
             withdrawBalanceLabel:setText("Available: " .. balance .. " " .. config.currency.displayNamePlural)
             transferBalanceLabel:setText("Available: " .. balance .. " " .. config.currency.displayNamePlural)
             
             -- Show initial screen
+            app:setFocus(usernameInput)
             showScreen("welcome")
             
             -- Start UI

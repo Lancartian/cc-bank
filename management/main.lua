@@ -26,6 +26,9 @@ local root = sgl.Panel:new(1, 1, 51, 19)
 root:setTitle("CC-Bank Management")
 root:setBorder(true)
 
+-- Set root before adding children
+app:setRoot(root)
+
 -- Utility function to show message
 local function showMessage(message, isError)
     statusMessage = message
@@ -441,9 +444,6 @@ listAccBackBtn.onClick = function()
     showScreen("accounts")
 end
 listAccountsScreen:addChild(listAccBackBtn)
-
--- Set root and run
-app:setRoot(root)
 
 -- Determine initial screen and focus
 if not config.management.masterPasswordHash then
