@@ -217,12 +217,16 @@ function networkStorage.scanNetwork()
                 -- Check for denomination marker
                 local denomValue, markerSlot = getDenominationFromChest(chest)
                 if denomValue then
-                    denominationChests[denomValue] = {
+                    -- Support multiple chests per denomination
+                    if not denominationChests[denomValue] then
+                        denominationChests[denomValue] = {}
+                    end
+                    table.insert(denominationChests[denomValue], {
                         name = peripheralName,
                         peripheral = chest,
                         denomination = denomValue,
                         markerSlot = markerSlot
-                    }
+                    })
                     print("  Found $" .. denomValue .. " denomination chest: " .. peripheralName)
                 end
                 
@@ -246,10 +250,12 @@ function networkStorage.scanNetwork()
     print("  OUTPUT chest: " .. (outputChest and "YES" or "NO"))
     
     local denomCount = 0
-    for _ in pairs(denominationChests) do
-        denomCount = denomCount + 1
+    local denomTypes = 0
+    for denomValue, chests in pairs(denominationChests) do
+        denomTypes = denomTypes + 1
+        denomCount = denomCount + #chests
     end
-    print("  Denomination chests: " .. denomCount)
+    print("  Denomination chests: " .. denomCount .. " chest(s) across " .. denomTypes .. " denomination(s)")
     
     local voidCount = 0
     for _ in pairs(voidChests) do
@@ -270,9 +276,18 @@ function networkStorage.getOutputChest()
     return outputChest
 end
 
--- Get denomination chest for specific value
+-- Get denomination chest for specific value (returns first available)
 function networkStorage.getDenominationChest(value)
-    return denominationChests[value]
+    local chests = denominationChests[value]
+    if chests and #chests > 0 then
+        return chests[1]
+    end
+    return nil
+end
+
+-- Get all chests for a specific denomination
+function networkStorage.getDenominationChests(value)
+    return denominationChests[value] or {}
 end
 
 -- Get all denomination chests
@@ -342,9 +357,9 @@ end
 
 -- Pull specific denomination to output chest
 function networkStorage.pullDenominationToOutput(denomination, count)
-    local denomChest = denominationChests[denomination]
+    local denomChests = denominationChests[denomination]
     
-    if not denomChest then
+    if not denomChests or #denomChests == 0 then
         return 0, "Denomination chest not found for $" .. denomination
     end
     
@@ -352,12 +367,31 @@ function networkStorage.pullDenominationToOutput(denomination, count)
         return 0, "Output chest not configured"
     end
     
-    -- Transfer currency items from denomination chest to output chest
+    -- Transfer currency items from denomination chests to output chest
+    -- Pull from multiple chests if needed
     local filter = {
         name = config.currency.itemName
     }
     
-    return networkStorage.transferItems(denomChest, outputChest, filter, count)
+    local totalTransferred = 0
+    for _, denomChest in ipairs(denomChests) do
+        if totalTransferred >= count then
+            break
+        end
+        
+        local needed = count - totalTransferred
+        local transferred, err = networkStorage.transferItems(denomChest, outputChest, filter, needed)
+        
+        if transferred and transferred > 0 then
+            totalTransferred = totalTransferred + transferred
+        end
+    end
+    
+    if totalTransferred < count then
+        return totalTransferred, "Only transferred " .. totalTransferred .. " of " .. count .. " items"
+    end
+    
+    return totalTransferred, nil
 end
 
 -- Get items in mint chest for minting

@@ -107,7 +107,9 @@ Option B - Manual installation:
    - Connect chests to the peripheral network using networking cables and wired modems:
      * 1 MINT chest (place paper named "MINT" inside)
      * 1 OUTPUT chest (place paper named "OUTPUT" inside)
-     * 6 denomination chests (place papers named "1", "5", "10", "20", "50", "100" inside)
+     * 6+ denomination chests (place papers named "1", "5", "10", "20", "50", "100" inside)
+       - You can have **multiple chests for the same denomination** for more storage
+       - Example: 3 chests with "100" papers for $100 bills
      * 16 void chests for ATMs (name peripherals as "atm1", "atm2", etc. or "void_1", "void_2", etc.)
    - **Important**: Do NOT directly attach chests to the computer - only via wired modem network
    - Set void chest frequencies by placing two items in each void chest's frequency slots
