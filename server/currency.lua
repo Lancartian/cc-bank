@@ -1,9 +1,9 @@
 -- server/currency.lua
 -- Physical currency management with NBT-based verification
 
-local crypto = require("lib/crypto")
-local config = require("config")
-local networkStorage = require("server/network_storage")
+local crypto = require("/lib/crypto")
+local config = require("/config")
+local networkStorage = require("/server/network_storage")
 
 local currency = {}
 

@@ -1,7 +1,7 @@
 -- lib/logger.lua
 -- Logging system for CC-Bank
 
-local config = require("config")
+local config = require("/config")
 
 local logger = {}
 

@@ -1,7 +1,7 @@
 -- server/transactions.lua
 -- Transaction management and logging
 
-local config = require("config")
+local config = require("/config")
 
 local transactions = {}
 

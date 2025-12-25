@@ -1,7 +1,7 @@
 -- server/network_storage.lua
 -- Peripheral network storage management for currency chests
 
-local config = require("config")
+local config = require("/config")
 
 local networkStorage = {}
 

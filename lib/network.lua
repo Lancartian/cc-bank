@@ -1,7 +1,7 @@
 -- lib/network.lua
 -- Secure networking protocol for bank communications
 
-local crypto = require("lib/crypto")
+local crypto = require("/lib/crypto")
 
 local network = {}
 

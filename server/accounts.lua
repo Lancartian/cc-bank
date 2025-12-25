@@ -1,8 +1,8 @@
 -- server/accounts.lua
 -- Account management system
 
-local crypto = require("lib/crypto")
-local config = require("config")
+local crypto = require("/lib/crypto")
+local config = require("/config")
 
 local accounts = {}
 

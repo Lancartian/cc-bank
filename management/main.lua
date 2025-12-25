@@ -1,10 +1,10 @@
 -- management/main.lua
 -- Bank management console with SGL interface
 
-local sgl = require("lib/sgl/sgl")
-local config = require("config")
-local network = require("lib/network")
-local crypto = require("lib/crypto")
+local sgl = require("/lib/sgl/sgl")
+local config = require("/config")
+local network = require("/lib/network")
+local crypto = require("/lib/crypto")
 
 -- Initialize config
 config.init()
@@ -444,7 +444,7 @@ function screens.authorizeATM()
         end
         
         -- Generate secure authorization token
-        local crypto = require("lib/crypto")
+        local crypto = require("/lib/crypto")
         local token = crypto.generateToken()
         
         -- Store in config

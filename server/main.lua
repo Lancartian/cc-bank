@@ -1,13 +1,13 @@
 -- server/main.lua
 -- Main bank server backend
 
-local config = require("config")
-local network = require("lib/network")
-local crypto = require("lib/crypto")
-local accounts = require("server/accounts")
-local currency = require("server/currency")
-local transactions = require("server/transactions")
-local networkStorage = require("server/network_storage")
+local config = require("/config")
+local network = require("/lib/network")
+local crypto = require("/lib/crypto")
+local accounts = require("/server/accounts")
+local currency = require("/server/currency")
+local transactions = require("/server/transactions")
+local networkStorage = require("/server/network_storage")
 
 -- Initialize configuration
 config.init()
