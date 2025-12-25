@@ -2,7 +2,7 @@
 -- Installer for CC-Bank system
 
 local REPO_URL = "https://raw.githubusercontent.com/Lancartian/cc-bank/main/"
-local component = "all"  -- all, server, management, or atm
+local component = nil  -- Will be set by user choice or argument
 
 -- Check arguments
 local args = {...}
@@ -43,8 +43,8 @@ else
     print("")
 end
 
--- Ask which component to install
-if component ~= "all" and component ~= "server" and component ~= "management" and component ~= "atm" then
+-- Ask which component to install (if not specified as argument)
+if not component or (component ~= "all" and component ~= "server" and component ~= "management" and component ~= "atm") then
     print("Which component do you want to install?")
     print("1. All components (recommended for first install)")
     print("2. Server only")
