@@ -231,11 +231,12 @@ loginBtn.onClick = function()
     loginStatusLabel.style.fgColor = colors.white
     root:markDirty()
     
-    -- Create authentication request (not encrypted - no shared key yet)
+    -- Create encrypted authentication request
+    -- Encryption key was received during ATM registration
     local message = network.createMessage(network.MSG.AUTH_REQUEST, {
         username = user,
         password = pass
-    })
+    }, nil, encryptionKey)
     
     network.broadcast(modem, config.server.port, message)
     

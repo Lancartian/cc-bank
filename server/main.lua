@@ -87,6 +87,7 @@ local sessions = {}  -- token -> session data
 local atmRegistry = {}  -- atmID -> {lastPing, online, authorized, computerID}
 local messageNonces = {}  -- Track nonces to prevent replay attacks
 local managementSessions = {}  -- token -> {created, lastActivity, computerID}
+local loginAttempts = {}  -- Track login attempts by sender for rate limiting
 
 -- Initialize modem
 local modem = network.init(config.server.port)
@@ -154,6 +155,62 @@ local function validateManagementSession(token)
     return session, nil
 end
 
+-- Check if nonce has been used (replay attack prevention)
+local function checkNonce(nonce, timestamp)
+    if not nonce then
+        return false, "missing_nonce"
+    end
+    
+    -- Check if message is too old (30 seconds)
+    local now = os.epoch("utc")
+    if now - timestamp > 30000 then
+        return false, "message_expired"
+    end
+    
+    -- Check if nonce has been used
+    if messageNonces[nonce] then
+        return false, "replay_detected"
+    end
+    
+    -- Mark nonce as used
+    messageNonces[nonce] = timestamp
+    
+    -- Clean old nonces (older than 1 minute)
+    for n, t in pairs(messageNonces) do
+        if now - t > 60000 then
+            messageNonces[n] = nil
+        end
+    end
+    
+    return true, nil
+end
+
+-- Rate limiting for login attempts
+local function checkRateLimit(sender)
+    local now = os.epoch("utc")
+    
+    if not loginAttempts[sender] then
+        loginAttempts[sender] = {count = 1, firstAttempt = now}
+        return true, nil
+    end
+    
+    local attempt = loginAttempts[sender]
+    
+    -- Reset if first attempt was more than 1 minute ago
+    if now - attempt.firstAttempt > 60000 then
+        loginAttempts[sender] = {count = 1, firstAttempt = now}
+        return true, nil
+    end
+    
+    -- Check if too many attempts
+    if attempt.count >= 5 then
+        return false, "rate_limit_exceeded"
+    end
+    
+    attempt.count = attempt.count + 1
+    return true, nil
+end
+
 -- Message handlers
 local handlers = {}
 
@@ -201,9 +258,27 @@ end
 
 -- Authentication
 handlers[network.MSG.AUTH_REQUEST] = function(message, sender)
-    -- Get credentials from message
-    local username = message.data.username
-    local password = message.data.password
+    -- Decrypt credentials if encrypted
+    local username, password
+    
+    if message.data.isEncrypted and message.data.encrypted then
+        -- Decrypt the payload
+        local decoded = crypto.base64Decode(message.data.encrypted)
+        local decrypted = crypto.decrypt(decoded, encryptionKey)
+        
+        -- Parse JSON
+        local success, data = pcall(textutils.unserialiseJSON, decrypted)
+        if not success then
+            return network.errorResponse("decryption_failed", "Could not decrypt credentials")
+        end
+        
+        username = data.username
+        password = data.password
+    else
+        -- Fallback for unencrypted (should not happen in production)
+        username = message.data.username
+        password = message.data.password
+    end
     
     if not username or not password then
         return network.errorResponse("missing_fields", "Username and password required")
@@ -276,6 +351,12 @@ end
 
 -- Balance check
 handlers[network.MSG.BALANCE_CHECK] = function(message, sender)
+    -- Check nonce
+    local nonceValid, nonceErr = checkNonce(message.nonce, message.timestamp)
+    if not nonceValid then
+        return network.errorResponse("replay_attack", nonceErr or "Replay attack detected")
+    end
+    
     local session, err = validateSession(message.token)
     if not session then
         return network.errorResponse("session_error", err)
@@ -294,6 +375,12 @@ end
 
 -- Withdrawal
 handlers[network.MSG.WITHDRAW] = function(message, sender)
+    -- Check nonce
+    local nonceValid, nonceErr = checkNonce(message.nonce, message.timestamp)
+    if not nonceValid then
+        return network.errorResponse("replay_attack", nonceErr or "Replay attack detected")
+    end
+    
     local session, err = validateSession(message.token)
     if not session then
         return network.errorResponse("session_error", err)
@@ -337,6 +424,12 @@ end
 
 -- Deposit
 handlers[network.MSG.DEPOSIT] = function(message, sender)
+    -- Check nonce
+    local nonceValid, nonceErr = checkNonce(message.nonce, message.timestamp)
+    if not nonceValid then
+        return network.errorResponse("replay_attack", nonceErr or "Replay attack detected")
+    end
+    
     local session, err = validateSession(message.token)
     if not session then
         return network.errorResponse("session_error", err)
@@ -367,6 +460,12 @@ end
 
 -- Transfer
 handlers[network.MSG.TRANSFER] = function(message, sender)
+    -- Check nonce
+    local nonceValid, nonceErr = checkNonce(message.nonce, message.timestamp)
+    if not nonceValid then
+        return network.errorResponse("replay_attack", nonceErr or "Replay attack detected")
+    end
+    
     local session, err = validateSession(message.token)
     if not session then
         return network.errorResponse("session_error", err)
