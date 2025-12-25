@@ -169,6 +169,7 @@ local function checkNonce(nonce, timestamp)
     
     -- Check if nonce has been used
     if messageNonces[nonce] then
+        print("WARNING: Replay detected - nonce already used: " .. nonce:sub(1, 8) .. "...")
         return false, "replay_detected"
     end
     

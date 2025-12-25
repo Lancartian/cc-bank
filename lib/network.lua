@@ -67,7 +67,11 @@ end
 -- Create secure message with encryption
 function network.createMessage(msgType, data, sessionToken, encryptionKey)
     local timestamp = os.epoch("utc")
-    local nonce = crypto.base64Encode(crypto.random(8))
+    -- Make nonce more unique by including computer ID and timestamp
+    local randomPart = crypto.random(8)
+    local computerID = os.getComputerID()
+    local nonceSource = tostring(computerID) .. tostring(timestamp) .. randomPart
+    local nonce = crypto.base64Encode(crypto.sha256(nonceSource):sub(1, 16))
     
     -- Encrypt sensitive data if encryption key provided
     local processedData = data or {}
