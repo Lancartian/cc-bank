@@ -420,6 +420,41 @@ handlers[network.MSG.ATM_REGISTER] = function(message, sender)
     })
 end
 
+-- ATM authorization from management console
+handlers[network.MSG.ATM_AUTHORIZE] = function(message, sender)
+    -- Require management authentication
+    local mgmtSession, err = validateManagementSession(message.token)
+    if not mgmtSession then
+        return network.errorResponse("unauthorized", err or "Management authentication required")
+    end
+    
+    local atmID = message.data.atmID
+    local authToken = message.data.authToken
+    
+    if not atmID or not authToken then
+        return network.errorResponse("missing_fields", "ATM ID and token required")
+    end
+    
+    local atmNum = tonumber(atmID)
+    if not atmNum or atmNum < 1 or atmNum > 16 then
+        return network.errorResponse("invalid_atm_id", "ATM ID must be between 1 and 16")
+    end
+    
+    -- Save authorization to server config
+    config.management.authorizedATMs[tostring(atmID)] = {
+        token = authToken,
+        authorized = os.epoch("utc")
+    }
+    config.save()
+    
+    print("ATM #" .. atmID .. " authorized by management console")
+    
+    return network.successResponse({
+        atmID = atmID,
+        authorized = true
+    })
+end
+
 -- ATM status update
 handlers[network.MSG.ATM_STATUS] = function(message, sender)
     local atmID = message.data.atmID
@@ -611,7 +646,8 @@ local function serverLoop()
                        message.type == network.MSG.CURRENCY_MINT or
                        message.type == network.MSG.ACCOUNT_CREATE or
                        message.type == network.MSG.ACCOUNT_LIST or
-                       message.type == network.MSG.ACCOUNT_DELETE then
+                       message.type == network.MSG.ACCOUNT_DELETE or
+                       message.type == network.MSG.ATM_AUTHORIZE then
                         responsePort = config.management.port
                     -- ATM messages get responses on ATM port  
                     elseif message.type == network.MSG.ATM_REGISTER or

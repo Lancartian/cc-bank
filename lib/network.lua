@@ -46,7 +46,8 @@ network.MSG = {
     ATM_STATUS = "ATM_STATUS",
     
     -- Management console
-    MGMT_LOGIN = "MGMT_LOGIN"
+    MGMT_LOGIN = "MGMT_LOGIN",
+    ATM_AUTHORIZE = "ATM_AUTHORIZE"
 }
 
 -- Open modem on specified port

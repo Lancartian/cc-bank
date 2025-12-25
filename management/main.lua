@@ -457,6 +457,27 @@ authBtn.onClick = function()
     end
     
     local token = crypto.generateATMToken()
+    
+    -- Send authorization to server
+    authStatusLabel:setText("Authorizing...")
+    authStatusLabel.style.fgColor = colors.white
+    authTokenLabel:setText("")
+    root:markDirty()
+    
+    local result, err = sendToServer(network.MSG.ATM_AUTHORIZE, {
+        atmID = atmID,
+        authToken = token
+    })
+    
+    if not result then
+        authStatusLabel:setText("Error: " .. tostring(err))
+        authStatusLabel.style.fgColor = colors.red
+        authTokenLabel:setText("")
+        root:markDirty()
+        return
+    end
+    
+    -- Also save locally for reference
     config.management.authorizedATMs[atmID] = {
         token = token,
         authorized = os.epoch("utc")
