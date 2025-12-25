@@ -132,11 +132,11 @@ welcomeScreen:setVisible(false)
 welcomeScreen.data = {isScreen = true, screenName = "welcome"}
 root:addChild(welcomeScreen)
     
-local titleLabel = sgl.Label:new(5, 3, config.atm.welcomeMessage)
+local titleLabel = sgl.Label:new(5, 3, config.atm.welcomeMessage, 43)
 titleLabel.style.fgColor = colors.yellow
 welcomeScreen:addChild(titleLabel)
 
-local infoLabel = sgl.Label:new(8, 6, "Secure Banking Services")
+local infoLabel = sgl.Label:new(8, 6, "Secure Banking Services", 43)
 infoLabel.style.fgColor = colors.lightBlue
 welcomeScreen:addChild(infoLabel)
 
@@ -148,7 +148,7 @@ startBtn.onClick = function()
 end
 welcomeScreen:addChild(startBtn)
 
-local atmInfo = sgl.Label:new(2, 14, "ATM ID: " .. atmID)
+local atmInfo = sgl.Label:new(2, 14, "ATM ID: " .. atmID, 43)
 atmInfo.style.fgColor = colors.gray
 welcomeScreen:addChild(atmInfo)
 
@@ -159,20 +159,20 @@ loginScreen:setVisible(false)
 loginScreen.data = {isScreen = true, screenName = "login"}
 root:addChild(loginScreen)
 
-local usernameLabel = sgl.Label:new(2, 1, "Username:")
+local usernameLabel = sgl.Label:new(2, 1, "Username:", 43)
 loginScreen:addChild(usernameLabel)
 
 local usernameInput = sgl.Input:new(2, 2, 43)
 loginScreen:addChild(usernameInput)
 
-local passwordLabel = sgl.Label:new(2, 4, "Password:")
+local passwordLabel = sgl.Label:new(2, 4, "Password:", 43)
 loginScreen:addChild(passwordLabel)
 
 local passwordInput = sgl.Input:new(2, 5, 43)
 passwordInput:setMasked(true)
 loginScreen:addChild(passwordInput)
 
-local loginStatusLabel = sgl.Label:new(2, 13, "")
+local loginStatusLabel = sgl.Label:new(2, 13, "", 43)
 loginScreen:addChild(loginStatusLabel)
 
 local loginBtn = sgl.Button:new(8, 8, 30, 3, "Login")
@@ -266,11 +266,11 @@ menuScreen:setVisible(false)
 menuScreen.data = {isScreen = true, screenName = "menu"}
 root:addChild(menuScreen)
 
-local welcomeLabel = sgl.Label:new(2, 1, "Welcome")
+local welcomeLabel = sgl.Label:new(2, 1, "Welcome", 43)
 welcomeLabel.style.fgColor = colors.yellow
 menuScreen:addChild(welcomeLabel)
 
-local balanceLabel = sgl.Label:new(2, 2, "Balance: 0")
+local balanceLabel = sgl.Label:new(2, 2, "Balance: 0", 43)
 balanceLabel.style.fgColor = colors.lightBlue
 menuScreen:addChild(balanceLabel)
     
@@ -331,15 +331,15 @@ checkBalanceScreen:setVisible(false)
 checkBalanceScreen.data = {isScreen = true, screenName = "checkBalance"}
 root:addChild(checkBalanceScreen)
 
-local balanceTitleLabel = sgl.Label:new(2, 1, "Current Balance")
+local balanceTitleLabel = sgl.Label:new(2, 1, "Current Balance", 43)
 balanceTitleLabel.style.fgColor = colors.yellow
 checkBalanceScreen:addChild(balanceTitleLabel)
 
-local balanceDisplayLabel = sgl.Label:new(2, 4, "")
+local balanceDisplayLabel = sgl.Label:new(2, 4, "", 43)
 balanceDisplayLabel.style.fgColor = colors.green
 checkBalanceScreen:addChild(balanceDisplayLabel)
 
-local accountDisplayLabel = sgl.Label:new(2, 7, "")
+local accountDisplayLabel = sgl.Label:new(2, 7, "", 43)
 checkBalanceScreen:addChild(accountDisplayLabel)
 
 local balanceBackBtn = sgl.Button:new(12, 11, 20, 3, "Back to Menu")
@@ -371,20 +371,20 @@ withdrawScreen:setVisible(false)
 withdrawScreen.data = {isScreen = true, screenName = "withdraw"}
 root:addChild(withdrawScreen)
 
-local withdrawTitleLabel = sgl.Label:new(2, 1, "Withdrawal")
+local withdrawTitleLabel = sgl.Label:new(2, 1, "Withdrawal", 43)
 withdrawTitleLabel.style.fgColor = colors.yellow
 withdrawScreen:addChild(withdrawTitleLabel)
 
-local withdrawBalanceLabel = sgl.Label:new(2, 3, "")
+local withdrawBalanceLabel = sgl.Label:new(2, 3, "", 43)
 withdrawScreen:addChild(withdrawBalanceLabel)
 
-local withdrawAmountLabel = sgl.Label:new(2, 5, "Amount to withdraw:")
+local withdrawAmountLabel = sgl.Label:new(2, 5, "Amount to withdraw:", 43)
 withdrawScreen:addChild(withdrawAmountLabel)
 
 local withdrawAmountInput = sgl.Input:new(2, 6, 43)
 withdrawScreen:addChild(withdrawAmountInput)
 
-local withdrawStatusLabel = sgl.Label:new(2, 13, "")
+local withdrawStatusLabel = sgl.Label:new(2, 13, "", 43)
 withdrawScreen:addChild(withdrawStatusLabel)
 
 local withdrawBtn = sgl.Button:new(8, 9, 30, 3, "Withdraw")
@@ -453,20 +453,20 @@ depositScreen:setVisible(false)
 depositScreen.data = {isScreen = true, screenName = "deposit"}
 root:addChild(depositScreen)
 
-local depositTitleLabel = sgl.Label:new(2, 1, "Deposit")
+local depositTitleLabel = sgl.Label:new(2, 1, "Deposit", 43)
 depositTitleLabel.style.fgColor = colors.yellow
 depositScreen:addChild(depositTitleLabel)
 
-local depositInfoLabel = sgl.Label:new(2, 3, "Insert currency into deposit slot")
+local depositInfoLabel = sgl.Label:new(2, 3, "Insert currency into deposit slot", 43)
 depositScreen:addChild(depositInfoLabel)
 
-local depositAmountLabel = sgl.Label:new(2, 6, "Amount to deposit:")
+local depositAmountLabel = sgl.Label:new(2, 6, "Amount to deposit:", 43)
 depositScreen:addChild(depositAmountLabel)
 
 local depositAmountInput = sgl.Input:new(2, 7, 43)
 depositScreen:addChild(depositAmountInput)
 
-local depositStatusLabel = sgl.Label:new(2, 13, "")
+local depositStatusLabel = sgl.Label:new(2, 13, "", 43)
 depositScreen:addChild(depositStatusLabel)
 
 local scanBtn = sgl.Button:new(5, 10, 18, 2, "Scan Currency")
@@ -535,26 +535,26 @@ transferScreen:setVisible(false)
 transferScreen.data = {isScreen = true, screenName = "transfer"}
 root:addChild(transferScreen)
 
-local transferTitleLabel = sgl.Label:new(2, 1, "Transfer Funds")
+local transferTitleLabel = sgl.Label:new(2, 1, "Transfer Funds", 43)
 transferTitleLabel.style.fgColor = colors.yellow
 transferScreen:addChild(transferTitleLabel)
 
-local transferBalanceLabel = sgl.Label:new(2, 3, "")
+local transferBalanceLabel = sgl.Label:new(2, 3, "", 43)
 transferScreen:addChild(transferBalanceLabel)
 
-local transferAccountLabel = sgl.Label:new(2, 5, "To Account Number:")
+local transferAccountLabel = sgl.Label:new(2, 5, "To Account Number:", 43)
 transferScreen:addChild(transferAccountLabel)
 
 local transferAccountInput = sgl.Input:new(2, 6, 43)
 transferScreen:addChild(transferAccountInput)
 
-local transferAmountLabel = sgl.Label:new(2, 8, "Amount:")
+local transferAmountLabel = sgl.Label:new(2, 8, "Amount:", 43)
 transferScreen:addChild(transferAmountLabel)
 
 local transferAmountInput = sgl.Input:new(2, 9, 43)
 transferScreen:addChild(transferAmountInput)
 
-local transferStatusLabel = sgl.Label:new(2, 14, "")
+local transferStatusLabel = sgl.Label:new(2, 14, "", 43)
 transferScreen:addChild(transferStatusLabel)
 
 local transferConfirmBtn = sgl.Button:new(8, 12, 30, 3, "Transfer")

@@ -70,25 +70,25 @@ setupScreen:setVisible(false)
 setupScreen.data = {isScreen = true, screenName = "setup"}
 root:addChild(setupScreen)
 
-local label1 = sgl.Label:new(2, 2, "Create Master Password")
+local label1 = sgl.Label:new(2, 2, "Create Master Password", 43)
 label1.style.fgColor = colors.yellow
 setupScreen:addChild(label1)
 
-local label2 = sgl.Label:new(2, 4, "Password:")
+local label2 = sgl.Label:new(2, 4, "Password:", 43)
 setupScreen:addChild(label2)
 
 local passwordInput = sgl.Input:new(2, 5, 40)
 passwordInput:setMasked(true)
 setupScreen:addChild(passwordInput)
 
-local label3 = sgl.Label:new(2, 7, "Confirm Password:")
+local label3 = sgl.Label:new(2, 7, "Confirm Password:", 43)
 setupScreen:addChild(label3)
 
 local confirmInput = sgl.Input:new(2, 8, 40)
 confirmInput:setMasked(true)
 setupScreen:addChild(confirmInput)
 
-local statusLabel = sgl.Label:new(2, 10, "")
+local statusLabel = sgl.Label:new(2, 10, "", 43)
 statusLabel.style.fgColor = colors.red
 setupScreen:addChild(statusLabel)
 
@@ -132,18 +132,18 @@ loginScreen:setVisible(false)
 loginScreen.data = {isScreen = true, screenName = "login"}
 root:addChild(loginScreen)
 
-local titleLabel = sgl.Label:new(10, 2, "CC-Bank Management")
+local titleLabel = sgl.Label:new(10, 2, "CC-Bank Management", 43)
 titleLabel.style.fgColor = colors.yellow
 loginScreen:addChild(titleLabel)
 
-local passLabel = sgl.Label:new(2, 5, "Master Password:")
+local passLabel = sgl.Label:new(2, 5, "Master Password:", 43)
 loginScreen:addChild(passLabel)
 
 local loginPasswordInput = sgl.Input:new(2, 6, 40)
 loginPasswordInput:setMasked(true)
 loginScreen:addChild(loginPasswordInput)
 
-local loginStatusLabel = sgl.Label:new(2, 8, "")
+local loginStatusLabel = sgl.Label:new(2, 8, "", 43)
 loginScreen:addChild(loginStatusLabel)
 
 local loginBtn = sgl.Button:new(10, 10, 25, 2, "Login")
@@ -170,7 +170,7 @@ mainScreen:setVisible(false)
 mainScreen.data = {isScreen = true, screenName = "main"}
 root:addChild(mainScreen)
 
-local mainTitle = sgl.Label:new(15, 1, "Main Menu")
+local mainTitle = sgl.Label:new(15, 1, "Main Menu", 43)
 mainTitle.style.fgColor = colors.yellow
 mainScreen:addChild(mainTitle)
 
@@ -217,7 +217,7 @@ accountsScreen:setVisible(false)
 accountsScreen.data = {isScreen = true, screenName = "accounts"}
 root:addChild(accountsScreen)
 
-local accountsTitle = sgl.Label:new(10, 1, "Account Management")
+local accountsTitle = sgl.Label:new(10, 1, "Account Management", 43)
 accountsTitle.style.fgColor = colors.yellow
 accountsScreen:addChild(accountsTitle)
 
@@ -246,14 +246,14 @@ currencyScreen:setVisible(false)
 currencyScreen.data = {isScreen = true, screenName = "currency"}
 root:addChild(currencyScreen)
 
-local currencyTitle = sgl.Label:new(10, 1, "Currency Minting")
+local currencyTitle = sgl.Label:new(10, 1, "Currency Minting", 43)
 currencyTitle.style.fgColor = colors.yellow
 currencyScreen:addChild(currencyTitle)
 
-local currencyInfo = sgl.Label:new(2, 3, "Place items in mint chest")
+local currencyInfo = sgl.Label:new(2, 3, "Place items in mint chest", 43)
 currencyScreen:addChild(currencyInfo)
 
-local amountLabel = sgl.Label:new(2, 5, "Amount to mint:")
+local amountLabel = sgl.Label:new(2, 5, "Amount to mint:", 43)
 currencyScreen:addChild(amountLabel)
 
 local amountInput = sgl.Input:new(2, 6, 40)
@@ -281,17 +281,17 @@ statsScreen:setVisible(false)
 statsScreen.data = {isScreen = true, screenName = "stats"}
 root:addChild(statsScreen)
 
-local statsTitle = sgl.Label:new(10, 1, "System Statistics")
+local statsTitle = sgl.Label:new(10, 1, "System Statistics", 43)
 statsTitle.style.fgColor = colors.yellow
 statsScreen:addChild(statsTitle)
 
-local stat1 = sgl.Label:new(2, 3, "Total Accounts: 0")
+local stat1 = sgl.Label:new(2, 3, "Total Accounts: 0", 43)
 statsScreen:addChild(stat1)
 
-local stat2 = sgl.Label:new(2, 4, "Total Transactions: 0")
+local stat2 = sgl.Label:new(2, 4, "Total Transactions: 0", 43)
 statsScreen:addChild(stat2)
 
-local stat3 = sgl.Label:new(2, 5, "Currency Supply: 0 Credits")
+local stat3 = sgl.Label:new(2, 5, "Currency Supply: 0 Credits", 43)
 statsScreen:addChild(stat3)
 
 local statsBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
@@ -307,7 +307,7 @@ atmScreen:setVisible(false)
 atmScreen.data = {isScreen = true, screenName = "atm"}
 root:addChild(atmScreen)
 
-local atmTitle = sgl.Label:new(10, 1, "ATM Management")
+local atmTitle = sgl.Label:new(10, 1, "ATM Management", 43)
 atmTitle.style.fgColor = colors.yellow
 atmScreen:addChild(atmTitle)
 
@@ -336,23 +336,23 @@ authorizeATMScreen:setVisible(false)
 authorizeATMScreen.data = {isScreen = true, screenName = "authorizeATM"}
 root:addChild(authorizeATMScreen)
 
-local authTitle = sgl.Label:new(10, 1, "Authorize ATM")
+local authTitle = sgl.Label:new(10, 1, "Authorize ATM", 43)
 authTitle.style.fgColor = colors.yellow
 authorizeATMScreen:addChild(authTitle)
 
-local idLabel = sgl.Label:new(2, 3, "ATM ID:")
+local idLabel = sgl.Label:new(2, 3, "ATM ID:", 43)
 authorizeATMScreen:addChild(idLabel)
 
 local idInput = sgl.Input:new(2, 4, 40)
 authorizeATMScreen:addChild(idInput)
 
-local freqLabel = sgl.Label:new(2, 6, "Void Chest Frequency:")
+local freqLabel = sgl.Label:new(2, 6, "Void Chest Frequency:", 43)
 authorizeATMScreen:addChild(freqLabel)
 
-local freqInput = sgl.Input:new(2, 7, 40)
+local freqInput = sgl.Input:new(2, 7, 43)
 authorizeATMScreen:addChild(freqInput)
 
-local authStatusLabel = sgl.Label:new(2, 9, "")
+local authStatusLabel = sgl.Label:new(2, 9, "", 43)
 authorizeATMScreen:addChild(authStatusLabel)
 
 local authBtn = sgl.Button:new(10, 11, 25, 2, "Authorize")
@@ -396,12 +396,12 @@ listATMsScreen:setVisible(false)
 listATMsScreen.data = {isScreen = true, screenName = "listATMs"}
 root:addChild(listATMsScreen)
 
-local listATMTitle = sgl.Label:new(10, 1, "Authorized ATMs")
+local listATMTitle = sgl.Label:new(10, 1, "Authorized ATMs", 43)
 listATMTitle.style.fgColor = colors.yellow
 listATMsScreen:addChild(listATMTitle)
 
 -- ATM list would be dynamically populated here
-local noATMLabel = sgl.Label:new(2, 3, "No ATMs authorized yet")
+local noATMLabel = sgl.Label:new(2, 3, "No ATMs authorized yet", 43)
 noATMLabel.style.fgColor = colors.gray
 listATMsScreen:addChild(noATMLabel)
 
@@ -418,7 +418,7 @@ createAccountScreen:setVisible(false)
 createAccountScreen.data = {isScreen = true, screenName = "createAccount"}
 root:addChild(createAccountScreen)
 
-local createAccTitle = sgl.Label:new(10, 1, "Create New Account")
+local createAccTitle = sgl.Label:new(10, 1, "Create New Account", 43)
 createAccTitle.style.fgColor = colors.yellow
 createAccountScreen:addChild(createAccTitle)
 
@@ -435,7 +435,7 @@ listAccountsScreen:setVisible(false)
 listAccountsScreen.data = {isScreen = true, screenName = "listAccounts"}
 root:addChild(listAccountsScreen)
 
-local listAccTitle = sgl.Label:new(10, 1, "Account List")
+local listAccTitle = sgl.Label:new(10, 1, "Account List", 43)
 listAccTitle.style.fgColor = colors.yellow
 listAccountsScreen:addChild(listAccTitle)
 
