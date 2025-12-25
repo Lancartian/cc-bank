@@ -13,6 +13,53 @@ local networkStorage = require("/server/network_storage")
 config.init()
 config.load()
 
+-- First-run setup: Create management password if not set
+if not config.management.masterPasswordHash then
+    print("\n" .. string.rep("=", 50))
+    print("FIRST RUN SETUP - Management Password Required")
+    print(string.rep("=", 50))
+    print("\nNo management password configured.")
+    print("This password will be required for management console access.")
+    print("\nPassword requirements:")
+    print("  - Minimum 8 characters")
+    print("  - Keep it secure - this controls all admin functions")
+    print("")
+    
+    local password, confirm
+    local validPassword = false
+    
+    while not validPassword do
+        write("Enter master password: ")
+        password = read("*")
+        
+        if #password < 8 then
+            print("ERROR: Password must be at least 8 characters")
+            print("")
+        else
+            write("Confirm password: ")
+            confirm = read("*")
+            
+            if password ~= confirm then
+                print("ERROR: Passwords do not match")
+                print("")
+            else
+                validPassword = true
+            end
+        end
+    end
+    
+    -- Hash and save password
+    local passData = crypto.hashPassword(password)
+    config.management.masterPasswordHash = passData.hash
+    config.management.masterPasswordSalt = crypto.base64Encode(passData.salt)
+    config.save()
+    
+    print("\n" .. string.rep("=", 50))
+    print("Management password configured successfully!")
+    print(string.rep("=", 50))
+    print("")
+end
+
 -- Generate server encryption key if not exists
 if not config.security.encryptionKey then
     config.security.encryptionKey = crypto.sha256(crypto.random(32) .. os.epoch("utc"))
