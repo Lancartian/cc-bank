@@ -56,14 +56,11 @@ config.atm = {
     -- Network port
     port = 42001,
     
-    -- ATM ID (unique identifier for each ATM)
-    id = nil,  -- Set automatically based on computer ID
+    -- ATM ID (unique identifier for each ATM, 1-16)
+    id = nil,  -- Set during first-run setup
     
     -- Authorization token (obtained from management console)
-    authToken = nil,  -- MUST be set by administrator
-    
-    -- Void chest frequency (unique for each ATM)
-    frequency = nil,  -- Must be set for each ATM
+    authToken = nil,  -- Set during first-run setup
     
     -- UI configuration
     displayName = "CC-Bank ATM",

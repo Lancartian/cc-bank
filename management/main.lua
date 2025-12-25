@@ -417,29 +417,41 @@ authTitle.style.fgColor = colors.yellow
 authorizeATMScreen:addChild(authTitle)
 
 local idLabel = sgl.Label:new(2, 3, "ATM ID:", 43)
+local idLabel = sgl.Label:new(2, 3, "ATM ID (1-16):", 43)
 authorizeATMScreen:addChild(idLabel)
 
 local idInput = sgl.Input:new(2, 4, 40, 1)
 authorizeATMScreen:addChild(idInput)
 
-local freqLabel = sgl.Label:new(2, 6, "Void Chest Frequency:", 43)
-authorizeATMScreen:addChild(freqLabel)
+local authInfoLabel = sgl.Label:new(2, 6, "Set void chest frequency in-game", 43)
+authInfoLabel.style.fgColor = colors.gray
+authorizeATMScreen:addChild(authInfoLabel)
 
-local freqInput = sgl.Input:new(2, 7, 43, 1)
-authorizeATMScreen:addChild(freqInput)
-
-local authStatusLabel = sgl.Label:new(2, 9, "", 43)
+local authStatusLabel = sgl.Label:new(2, 8, "", 43)
 authorizeATMScreen:addChild(authStatusLabel)
 
-local authBtn = sgl.Button:new(10, 11, 25, 2, "Authorize")
+local authTokenLabel = sgl.Label:new(2, 10, "", 43)
+authTokenLabel.style.fgColor = colors.yellow
+authorizeATMScreen:addChild(authTokenLabel)
+
+local authBtn = sgl.Button:new(10, 12, 25, 2, "Authorize")
 authBtn.style.bgColor = colors.green
 authBtn.onClick = function()
     local atmID = idInput:getText()
-    local frequency = tonumber(freqInput:getText())
     
-    if atmID == "" or not frequency then
-        authStatusLabel:setText("Invalid input")
+    if atmID == "" then
+        authStatusLabel:setText("Please enter ATM ID")
         authStatusLabel.style.fgColor = colors.red
+        authTokenLabel:setText("")
+        root:markDirty()
+        return
+    end
+    
+    local atmNum = tonumber(atmID)
+    if not atmNum or atmNum < 1 or atmNum > 16 then
+        authStatusLabel:setText("ATM ID must be between 1 and 16")
+        authStatusLabel.style.fgColor = colors.red
+        authTokenLabel:setText("")
         root:markDirty()
         return
     end
@@ -447,19 +459,23 @@ authBtn.onClick = function()
     local token = crypto.generateToken()
     config.management.authorizedATMs[atmID] = {
         token = token,
-        frequency = frequency,
         authorized = os.epoch("utc")
     }
     config.save()
     
-    authStatusLabel:setText("ATM " .. atmID .. " authorized!")
+    authStatusLabel:setText("Authorized! Enter on ATM:")
     authStatusLabel.style.fgColor = colors.green
-    print("ATM " .. atmID .. " Auth Token: " .. token)
+    authTokenLabel:setText("ID: " .. atmID .. " Token: " .. token)
+    print("\n========================================")
+    print("ATM #" .. atmID .. " Authorization")
+    print("========================================")
+    print("Token: " .. token)
+    print("========================================\n")
     root:markDirty()
 end
 authorizeATMScreen:addChild(authBtn)
 
-local authBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+local authBackBtn = sgl.Button:new(25, 12, 15, 2, "Back")
 authBackBtn.onClick = function()
     showScreen("atm")
 end

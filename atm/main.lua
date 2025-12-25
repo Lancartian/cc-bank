@@ -10,6 +10,55 @@ local crypto = require("/lib/crypto")
 config.init()
 config.load()
 
+-- First-run setup if ID or token not configured
+if not config.atm.id or not config.atm.authToken then
+    term.clear()
+    term.setCursorPos(1, 1)
+    print(string.rep("=", 50))
+    print("FIRST RUN SETUP - ATM Configuration")
+    print(string.rep("=", 50))
+    print("\nThis ATM needs to be authorized.")
+    print("\nSteps:")
+    print("1. Login to management console")
+    print("2. Go to 'ATM Management' > 'Authorize ATM'")
+    print("3. Enter an ATM ID (1-16)")
+    print("4. Copy the generated token")
+    print("5. Enter the ID and token below")
+    print("")
+    
+    local atmID, authToken
+    local valid = false
+    
+    while not valid do
+        write("Enter ATM ID (1-16): ")
+        atmID = tonumber(read())
+        
+        if not atmID or atmID < 1 or atmID > 16 then
+            print("ERROR: ATM ID must be between 1 and 16\n")
+        else
+            write("Enter authorization token: ")
+            authToken = read()
+            
+            if authToken == "" then
+                print("ERROR: Token cannot be empty\n")
+            else
+                valid = true
+            end
+        end
+    end
+    
+    -- Save configuration
+    config.atm.id = atmID
+    config.atm.authToken = authToken
+    config.save()
+    
+    print("\n" .. string.rep("=", 50))
+    print("Configuration saved!")
+    print("ATM will now start...")
+    print(string.rep("=", 50))
+    sleep(2)
+end
+
 -- ATM State
 local currentScreen = "welcome"
 local sessionToken = nil
@@ -22,31 +71,18 @@ local messageColor = colors.white
 -- Initialize modem
 local modem = network.init(config.atm.port)
 
--- ATM ID, frequency, and authorization token
-local atmID = config.atm.id or os.getComputerID()
-local frequency = config.atm.frequency or 0
-local authToken = config.atm.authToken  -- Must be set by administrator
+-- ATM ID and authorization token
+local atmID = config.atm.id
+local authToken = config.atm.authToken
 local encryptionKey = nil  -- Received from server on registration
 
 print("CC-Bank ATM v1.0")
 print("ATM ID: " .. atmID)
-print("Frequency: " .. frequency)
-
-if not authToken then
-    print("WARNING: No authorization token configured!")
-    print("Contact administrator to authorize this ATM")
-end
 
 -- Register with server (requires authorization)
 local function registerATM()
-    if not authToken then
-        print("ERROR: No authorization token configured")
-        return false
-    end
-    
     local message = network.createMessage(network.MSG.ATM_REGISTER, {
         atmID = atmID,
-        frequency = frequency,
         authToken = authToken
     })
     

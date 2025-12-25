@@ -43,7 +43,7 @@ A comprehensive, secure banking system for ComputerCraft with military-grade enc
 - **Peripheral network**: All inventory management via wired modem network using inventory API
 
 ### 🏧 ATM Network
-- **Multiple ATMs**: Support for up to 16 ATMs with unique void chest frequencies
+- **Multiple ATMs**: Support for up to 16 ATMs with unique IDs
 - **Interface Only**: ATMs have no inventory - they're just user interface terminals
 - **Authorization Required**: Only manager-authorized ATMs can register
 - **User-friendly interface**: Beautiful SGL-based touch interface
@@ -151,35 +151,32 @@ Option B - Manual installation:
 1. **Hardware Setup**:
    - Place a computer (advanced recommended for touch)
    - Attach a wireless modem
-   - Place a void chest and set its frequency in-game (using Create Utilities)
-   - Set up currency collection mechanism (conveyor belt from void chest to customer pickup)
+   - Place a void chest at ATM location
+   - Set void chest frequency in-game by placing two items in the frequency slots
+   - Set up currency collection (conveyor belt from void chest to customer pickup)
+   - Right-click bottom slot to claim the void chest (prevents tampering)
 
-2. **Get Authorization**:
-   ```
-   -- On management console first:
-   1. Login with master password
-   2. Navigate to "ATM Management" > "Authorize ATM"
-   3. Enter desired ATM ID and void chest frequency
-   4. Copy the generated authorization token
-   5. Provide token to ATM administrator
-   ```
+2. **Get Authorization** (on management console):
+   - Login with master password
+   - Navigate to "ATM Management" > "Authorize ATM"
+   - Enter desired ATM ID (1-16)
+   - Copy the generated authorization token (shown on screen and in terminal)
 
-3. **Software Setup**:
+3. **First Run** (on ATM):
    ```
    cd /
-   edit config.lua
-   
-   config.atm.id = 1  -- Must match authorization
-   config.atm.frequency = 1  -- For reference only - actual frequency set by items in void chest
-   config.atm.authToken = "token_from_management_console"
-   
    atm/main
    ```
+   - ATM will detect no configuration and run setup wizard
+   - Enter the ATM ID (must match authorization)
+   - Paste the authorization token
+   - Configuration saves automatically
+   - ATM starts and registers with server
 
-4. **ATM Registration**:
-   - ATM will register with server using authorization token
-   - Unauthorized ATMs will be rejected
-   - Verify registration in management console
+4. **Server Void Chest Setup**:
+   - On server's peripheral network, set the corresponding void chest to SAME frequency
+   - Example: If ATM #1 void chest has Stone + Stone, server's ATM #1 void chest must also have Stone + Stone
+   - Items pushed to server void chest will instantly appear in ATM void chest
 
 ## Void Chest Configuration
 

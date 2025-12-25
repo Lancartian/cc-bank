@@ -84,7 +84,7 @@ local encryptionKey = config.security.encryptionKey
 
 -- Session management
 local sessions = {}  -- token -> session data
-local atmRegistry = {}  -- atmID -> {frequency, lastPing, online, authorized}
+local atmRegistry = {}  -- atmID -> {lastPing, online, authorized, computerID}
 local messageNonces = {}  -- Track nonces to prevent replay attacks
 local managementSessions = {}  -- token -> {created, lastActivity, computerID}
 
@@ -384,11 +384,10 @@ end
 -- ATM registration (requires authorization token)
 handlers[network.MSG.ATM_REGISTER] = function(message, sender)
     local atmID = message.data.atmID
-    local frequency = message.data.frequency
     local authToken = message.data.authToken
     
-    if not atmID or not frequency then
-        return network.errorResponse("missing_fields", "ATM ID and frequency required")
+    if not atmID then
+        return network.errorResponse("missing_fields", "ATM ID required")
     end
     
     -- Check if ATM authorization is required
@@ -406,14 +405,13 @@ handlers[network.MSG.ATM_REGISTER] = function(message, sender)
     end
     
     atmRegistry[atmID] = {
-        frequency = frequency,
         lastPing = os.epoch("utc"),
         online = true,
         authorized = true,
         computerID = sender
     }
     
-    print("ATM registered: " .. atmID .. " (Frequency: " .. frequency .. ")")
+    print("ATM registered: " .. atmID .. " (Computer #" .. sender .. ")")
     
     return network.successResponse({
         registered = true,
@@ -509,7 +507,7 @@ end
 -- Process:
 -- 1. currency.prepareDispense() moves bills from denomination chests to OUTPUT chest
 -- 2. This function transfers items from OUTPUT chest to ATM's void chest
--- 3. Void chest frequency matching handles wireless transfer to ATM location
+-- 3. Void chest frequency (set in-game) handles wireless transfer to ATM location
 local function dispenseToATM(atmID, amount)
     if not atmRegistry[atmID] then
         return false, "atm_not_registered"
@@ -518,8 +516,6 @@ local function dispenseToATM(atmID, amount)
     if not atmRegistry[atmID].authorized then
         return false, "atm_not_authorized"
     end
-    
-    local frequency = atmRegistry[atmID].frequency
     
     -- Validate ATM ID range (1-16)
     if atmID < 1 or atmID > 16 then
@@ -572,7 +568,7 @@ local function dispenseToATM(atmID, amount)
         end
     end
     
-    print("Total dispensed: $" .. amount .. " to ATM " .. atmID .. " (Frequency: " .. frequency .. ")")
+    print("Total dispensed: $" .. amount .. " to ATM #" .. atmID)
     print("  " .. totalTransferred .. " total bills transferred")
     
     return true, nil
