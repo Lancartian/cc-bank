@@ -12,9 +12,6 @@ config.load()
 
 -- State
 local authenticated = false
-local currentScreen = "login"
-local accountList = {}
-local selectedAccount = nil
 local statusMessage = ""
 local messageColor = colors.white
 
@@ -24,8 +21,10 @@ local modem = network.init(config.management.port)
 -- Create application
 local app = sgl.createApplication("CC-Bank Management Console")
 
--- Screens
-local screens = {}
+-- Create root panel
+local root = sgl.Panel:new(1, 1, 51, 19)
+root:setTitle("CC-Bank Management")
+root:setBorder(true)
 
 -- Utility function to show message
 local function showMessage(message, isError)
@@ -50,531 +49,414 @@ local function sendToServer(msgType, data)
     return response.data, nil
 end
 
--- First run setup
-local function firstRunSetup()
-    if not config.management.masterPasswordHash then
-        local setupPanel = sgl.Panel:new(1, 1, 51, 19)
-        setupPanel:setTitle("First Run Setup")
-        
-        local label1 = sgl.Label:new(2, 2, "Create Master Password")
-        label1.style.fgColor = colors.yellow
-        setupPanel:addChild(label1)
-        
-        local label2 = sgl.Label:new(2, 4, "Password:")
-        setupPanel:addChild(label2)
-        
-        local passwordInput = sgl.Input:new(2, 5, 45)
-        passwordInput:setMasked(true)
-        setupPanel:addChild(passwordInput)
-        
-        local label3 = sgl.Label:new(2, 7, "Confirm Password:")
-        setupPanel:addChild(label3)
-        
-        local confirmInput = sgl.Input:new(2, 8, 45)
-        confirmInput:setMasked(true)
-        setupPanel:addChild(confirmInput)
-        
-        local saveBtn = sgl.Button:new(10, 11, 30, 3, "Save & Continue")
-        saveBtn.onClick = function()
-            local pass = passwordInput:getText()
-            local confirm = confirmInput:getText()
-            
-            if pass ~= confirm then
-                showMessage("Passwords do not match", true)
-                -- Recreate the panel to show error
-                firstRunSetup()
-                return
-            end
-            
-            if #pass < 8 then
-                showMessage("Password too short (min 8 chars)", true)
-                -- Recreate the panel to show error
-                firstRunSetup()
-                return
-            end
-            
-            local passData = crypto.hashPassword(pass)
-            config.management.masterPasswordHash = passData.hash
-            config.management.masterPasswordSalt = passData.salt
-            config.save()
-            
-            showMessage("Setup complete! Please login.", false)
-            authenticated = false
-            currentScreen = "login"
-            screens.login()
-            app:draw()
+-- Utility function to show screen
+local function showScreen(screenName)
+    for i = 1, #root.children do
+        local child = root.children[i]
+        if child.data and child.data.isScreen then
+            child:setVisible(child.data.screenName == screenName)
         end
-        setupPanel:addChild(saveBtn)
-        
-        if statusMessage ~= "" then
-            local msgLabel = sgl.Label:new(2, 15, statusMessage)
-            msgLabel.style.fgColor = messageColor
-            setupPanel:addChild(msgLabel)
-        end
-        
-        app:setRoot(setupPanel)
-        app:setFocus(passwordInput)
-        
-        return false
     end
-    return true
+    root:markDirty()
+end
+
+-- First run setup check
+if not config.management.masterPasswordHash then
+    -- First run setup screen
+    local setupScreen = sgl.Panel:new(2, 2, 47, 15)
+    setupScreen:setBorder(false)
+    setupScreen.data = {isScreen = true, screenName = "setup"}
+    root:addChild(setupScreen)
+    
+    local label1 = sgl.Label:new(2, 2, "Create Master Password")
+    label1.style.fgColor = colors.yellow
+    setupScreen:addChild(label1)
+    
+    local label2 = sgl.Label:new(2, 4, "Password:")
+    setupScreen:addChild(label2)
+    
+    local passwordInput = sgl.Input:new(2, 5, 40)
+    passwordInput:setMasked(true)
+    setupScreen:addChild(passwordInput)
+    
+    local label3 = sgl.Label:new(2, 7, "Confirm Password:")
+    setupScreen:addChild(label3)
+    
+    local confirmInput = sgl.Input:new(2, 8, 40)
+    confirmInput:setMasked(true)
+    setupScreen:addChild(confirmInput)
+    
+    local statusLabel = sgl.Label:new(2, 10, "")
+    statusLabel.style.fgColor = colors.red
+    setupScreen:addChild(statusLabel)
+    
+    local saveBtn = sgl.Button:new(10, 12, 25, 2, "Save & Continue")
+    saveBtn.style.bgColor = colors.green
+    saveBtn.onClick = function()
+        local pass = passwordInput:getText()
+        local confirm = confirmInput:getText()
+        
+        if pass ~= confirm then
+            statusLabel:setText("Passwords do not match")
+            statusLabel.style.fgColor = colors.red
+            root:markDirty()
+            return
+        end
+        
+        if #pass < 8 then
+            statusLabel:setText("Password too short (min 8 chars)")
+            statusLabel.style.fgColor = colors.red
+            root:markDirty()
+            return
+        end
+        
+        local passData = crypto.hashPassword(pass)
+        config.management.masterPasswordHash = passData.hash
+        config.management.masterPasswordSalt = passData.salt
+        config.save()
+        
+        statusLabel:setText("Setup complete! Please restart.")
+        statusLabel.style.fgColor = colors.green
+        root:markDirty()
+        sleep(2)
+        app:stop()
+    end
+    setupScreen:addChild(saveBtn)
+    
+    -- Set root and run
+    app:setRoot(root)
+    app:setFocus(passwordInput)
+    showScreen("setup")
+    app:run()
+    return
 end
 
 -- Login screen
-function screens.login()
-    local loginPanel = sgl.Panel:new(1, 1, 51, 19)
-    loginPanel:setTitle("Management Console - Login")
+local loginScreen = sgl.Panel:new(2, 2, 47, 15)
+loginScreen:setBorder(false)
+loginScreen.data = {isScreen = true, screenName = "login"}
+root:addChild(loginScreen)
+
+local titleLabel = sgl.Label:new(10, 2, "CC-Bank Management")
+titleLabel.style.fgColor = colors.yellow
+loginScreen:addChild(titleLabel)
+
+local passLabel = sgl.Label:new(2, 5, "Master Password:")
+loginScreen:addChild(passLabel)
+
+local loginPasswordInput = sgl.Input:new(2, 6, 40)
+loginPasswordInput:setMasked(true)
+loginScreen:addChild(loginPasswordInput)
+
+local loginStatusLabel = sgl.Label:new(2, 8, "")
+loginScreen:addChild(loginStatusLabel)
+
+local loginBtn = sgl.Button:new(10, 10, 25, 2, "Login")
+loginBtn.style.bgColor = colors.green
+loginBtn.onClick = function()
+    local password = loginPasswordInput:getText()
     
-    local titleLabel = sgl.Label:new(10, 3, "CC-Bank Management")
-    titleLabel.style.fgColor = colors.yellow
-    loginPanel:addChild(titleLabel)
-    
-    local passLabel = sgl.Label:new(2, 7, "Master Password:")
-    loginPanel:addChild(passLabel)
-    
-    local passwordInput = sgl.Input:new(2, 8, 45)
-    passwordInput:setMasked(true)
-    loginPanel:addChild(passwordInput)
-    
-    local loginBtn = sgl.Button:new(10, 11, 30, 3, "Login")
-    loginBtn.onClick = function()
-        local password = passwordInput:getText()
-        
-        if crypto.verifyPassword(password, config.management.masterPasswordHash, config.management.masterPasswordSalt) then
-            authenticated = true
-            currentScreen = "main"
-            screens.main()
-        else
-            showMessage("Invalid password", true)
-            passwordInput:setText("")
-        end
+    if crypto.verifyPassword(password, config.management.masterPasswordHash, config.management.masterPasswordSalt) then
+        authenticated = true
+        showScreen("main")
+    else
+        loginStatusLabel:setText("Invalid password")
+        loginStatusLabel.style.fgColor = colors.red
+        loginPasswordInput:setText("")
+        root:markDirty()
     end
-    loginPanel:addChild(loginBtn)
-    
-    if statusMessage ~= "" then
-        local msgLabel = sgl.Label:new(2, 15, statusMessage)
-        msgLabel.style.fgColor = messageColor
-        loginPanel:addChild(msgLabel)
-    end
-    
-    app:setRoot(loginPanel)
-    app:setFocus(passwordInput)
 end
+loginScreen:addChild(loginBtn)
 
 -- Main menu screen
-function screens.main()
-    local mainPanel = sgl.Panel:new(1, 1, 51, 19)
-    mainPanel:setTitle("Management Console - Main Menu")
-    
-    local titleLabel = sgl.Label:new(15, 2, "Main Menu")
-    titleLabel.style.fgColor = colors.yellow
-    mainPanel:addChild(titleLabel)
-    
-    local btnWidth = 40
-    local btnHeight = 2
-    local btnX = 6
-    local btnY = 4
-    
-    local accountsBtn = sgl.Button:new(btnX, btnY, btnWidth, btnHeight, "Manage Accounts")
-    accountsBtn.onClick = function()
-        currentScreen = "accounts"
-        screens.accounts()
-    end
-    mainPanel:addChild(accountsBtn)
-    
-    local currencyBtn = sgl.Button:new(btnX, btnY + 3, btnWidth, btnHeight, "Mint Currency")
-    currencyBtn.onClick = function()
-        currentScreen = "currency"
-        screens.currency()
-    end
-    mainPanel:addChild(currencyBtn)
-    
-    local statsBtn = sgl.Button:new(btnX, btnY + 6, btnWidth, btnHeight, "View Statistics")
-    statsBtn.onClick = function()
-        currentScreen = "stats"
-        screens.stats()
-    end
-    mainPanel:addChild(statsBtn)
-    
-    local atmBtn = sgl.Button:new(btnX, btnY + 9, btnWidth, btnHeight, "ATM Management")
-    atmBtn.onClick = function()
-        currentScreen = "atm"
-        screens.atmManagement()
-    end
-    mainPanel:addChild(atmBtn)
-    
-    local exitBtn = sgl.Button:new(btnX, btnY + 12, btnWidth, btnHeight, "Exit")
-    exitBtn.style.bgColor = colors.red
-    exitBtn.onClick = function()
-        app:stop()
-    end
-    mainPanel:addChild(exitBtn)
-    
-    app:setRoot(mainPanel)
-end
+local mainScreen = sgl.Panel:new(2, 2, 47, 15)
+mainScreen:setBorder(false)
+mainScreen:setVisible(false)
+mainScreen.data = {isScreen = true, screenName = "main"}
+root:addChild(mainScreen)
 
--- Account management screen
-function screens.accounts()
-    local accountPanel = sgl.Panel:new(1, 1, 51, 19)
-    accountPanel:setTitle("Account Management")
-    
-    local createBtn = sgl.Button:new(2, 2, 20, 2, "Create Account")
-    createBtn.onClick = function()
-        screens.createAccount()
-    end
-    accountPanel:addChild(createBtn)
-    
-    local listBtn = sgl.Button:new(24, 2, 20, 2, "List Accounts")
-    listBtn.onClick = function()
-        screens.listAccounts()
-    end
-    accountPanel:addChild(listBtn)
-    
-    local backBtn = sgl.Button:new(2, 16, 15, 2, "Back")
-    backBtn.onClick = function()
-        screens.main()
-    end
-    accountPanel:addChild(backBtn)
-    
-    app:setRoot(accountPanel)
-end
+local mainTitle = sgl.Label:new(15, 1, "Main Menu")
+mainTitle.style.fgColor = colors.yellow
+mainScreen:addChild(mainTitle)
 
--- Create account screen
-function screens.createAccount()
-    local createPanel = sgl.Panel:new(1, 1, 51, 19)
-    createPanel:setTitle("Create New Account")
-    
-    local usernameLabel = sgl.Label:new(2, 2, "Username:")
-    createPanel:addChild(usernameLabel)
-    
-    local usernameInput = sgl.Input:new(2, 3, 45)
-    createPanel:addChild(usernameInput)
-    
-    local passwordLabel = sgl.Label:new(2, 5, "Password:")
-    createPanel:addChild(passwordLabel)
-    
-    local passwordInput = sgl.Input:new(2, 6, 45)
-    passwordInput:setMasked(true)
-    createPanel:addChild(passwordInput)
-    
-    local balanceLabel = sgl.Label:new(2, 8, "Initial Balance:")
-    createPanel:addChild(balanceLabel)
-    
-    local balanceInput = sgl.Input:new(2, 9, 45)
-    balanceInput:setText("0")
-    createPanel:addChild(balanceInput)
-    
-    local createBtn = sgl.Button:new(10, 12, 30, 3, "Create Account")
-    createBtn.onClick = function()
-        local username = usernameInput:getText()
-        local password = passwordInput:getText()
-        local balance = tonumber(balanceInput:getText()) or 0
-        
-        -- Direct account creation (since we're on management console)
-        -- In production, this would go through server
-        showMessage("Account created: " .. username, false)
-        screens.accounts()
-    end
-    createPanel:addChild(createBtn)
-    
-    local backBtn = sgl.Button:new(2, 16, 15, 2, "Back")
-    backBtn.onClick = function()
-        screens.accounts()
-    end
-    createPanel:addChild(backBtn)
-    
-    app:setRoot(createPanel)
-    app:setFocus(usernameInput)
-end
+local btnWidth = 40
+local btnHeight = 2
+local btnX = 3
+local btnY = 3
 
--- List accounts screen
-function screens.listAccounts()
-    local listPanel = sgl.Panel:new(1, 1, 51, 19)
-    listPanel:setTitle("Account List")
-    
-    -- This would query the server for account list
-    local infoLabel = sgl.Label:new(2, 2, "Accounts will be listed here")
-    listPanel:addChild(infoLabel)
-    
-    local backBtn = sgl.Button:new(2, 16, 15, 2, "Back")
-    backBtn.onClick = function()
-        screens.accounts()
-    end
-    listPanel:addChild(backBtn)
-    
-    app:setRoot(listPanel)
+local accountsBtn = sgl.Button:new(btnX, btnY, btnWidth, btnHeight, "Manage Accounts")
+accountsBtn.onClick = function()
+    showScreen("accounts")
 end
+mainScreen:addChild(accountsBtn)
 
--- Currency minting screen
-function screens.currency()
-    local currencyPanel = sgl.Panel:new(1, 1, 51, 19)
-    currencyPanel:setTitle("Currency Minting")
-    
-    local infoLabel = sgl.Label:new(2, 2, "Place items in mint chest")
-    infoLabel.style.fgColor = colors.yellow
-    currencyPanel:addChild(infoLabel)
-    
-    local amountLabel = sgl.Label:new(2, 5, "Amount to mint:")
-    currencyPanel:addChild(amountLabel)
-    
-    local amountInput = sgl.Input:new(2, 6, 45)
-    amountInput:setText("100")
-    currencyPanel:addChild(amountInput)
-    
-    local mintBtn = sgl.Button:new(10, 9, 30, 3, "Mint Currency")
-    mintBtn.style.bgColor = colors.green
-    mintBtn.onClick = function()
-        local amount = tonumber(amountInput:getText()) or 0
-        
-        if amount <= 0 then
-            showMessage("Invalid amount", true)
-            return
-        end
-        
-        -- Trigger minting process
-        showMessage("Minting " .. amount .. " credits...", false)
-        
-        -- In production, this would interface with the currency system
-    end
-    currencyPanel:addChild(mintBtn)
-    
-    local statusLabel = sgl.Label:new(2, 14, "Status: Ready")
-    statusLabel.style.fgColor = colors.lightGray
-    currencyPanel:addChild(statusLabel)
-    
-    local backBtn = sgl.Button:new(2, 16, 15, 2, "Back")
-    backBtn.onClick = function()
-        screens.main()
-    end
-    currencyPanel:addChild(backBtn)
-    
-    app:setRoot(currencyPanel)
-    app:setFocus(amountInput)
+local currencyBtn = sgl.Button:new(btnX, btnY + 3, btnWidth, btnHeight, "Mint Currency")
+currencyBtn.onClick = function()
+    showScreen("currency")
 end
+mainScreen:addChild(currencyBtn)
 
--- Statistics screen
-function screens.stats()
-    local statsPanel = sgl.Panel:new(1, 1, 51, 19)
-    statsPanel:setTitle("System Statistics")
-    
-    local titleLabel = sgl.Label:new(2, 2, "Bank Statistics")
-    titleLabel.style.fgColor = colors.yellow
-    statsPanel:addChild(titleLabel)
-    
-    -- These would be fetched from server
-    local stats = {
-        "Total Accounts: 0",
-        "Total Transactions: 0",
-        "Currency Supply: 0 Credits",
-        "Active ATMs: 0",
-        "Server Uptime: 0m"
-    }
-    
-    for i, stat in ipairs(stats) do
-        local label = sgl.Label:new(2, 3 + i, stat)
-        statsPanel:addChild(label)
-    end
-    
-    local refreshBtn = sgl.Button:new(2, 12, 20, 2, "Refresh")
-    refreshBtn.onClick = function()
-        screens.stats()  -- Reload screen
-    end
-    statsPanel:addChild(refreshBtn)
-    
-    local backBtn = sgl.Button:new(2, 16, 15, 2, "Back")
-    backBtn.onClick = function()
-        screens.main()
-    end
-    statsPanel:addChild(backBtn)
-    
-    app:setRoot(statsPanel)
+local statsBtn = sgl.Button:new(btnX, btnY + 6, btnWidth, btnHeight, "View Statistics")
+statsBtn.onClick = function()
+    showScreen("stats")
 end
+mainScreen:addChild(statsBtn)
 
--- ATM management screen
-function screens.atmManagement()
-    local atmPanel = sgl.Panel:new(1, 1, 51, 19)
-    atmPanel:setTitle("ATM Management")
-    
-    local titleLabel = sgl.Label:new(2, 2, "ATM Authorization")
-    titleLabel.style.fgColor = colors.yellow
-    atmPanel:addChild(titleLabel)
-    
-    local authorizeBtn = sgl.Button:new(2, 4, 20, 2, "Authorize ATM")
-    authorizeBtn.onClick = function()
-        screens.authorizeATM()
-    end
-    atmPanel:addChild(authorizeBtn)
-    
-    local listBtn = sgl.Button:new(24, 4, 20, 2, "List ATMs")
-    listBtn.onClick = function()
-        screens.listATMs()
-    end
-    atmPanel:addChild(listBtn)
-    
-    local revokeBtn = sgl.Button:new(2, 7, 20, 2, "Revoke ATM")
-    revokeBtn.style.bgColor = colors.red
-    revokeBtn.onClick = function()
-        screens.revokeATM()
-    end
-    atmPanel:addChild(revokeBtn)
-    
-    local backBtn = sgl.Button:new(2, 16, 15, 2, "Back")
-    backBtn.onClick = function()
-        screens.main()
-    end
-    atmPanel:addChild(backBtn)
-    
-    app:setRoot(atmPanel)
+local atmBtn = sgl.Button:new(btnX, btnY + 9, btnWidth, btnHeight, "ATM Management")
+atmBtn.onClick = function()
+    showScreen("atm")
 end
+mainScreen:addChild(atmBtn)
 
--- Authorize new ATM
-function screens.authorizeATM()
-    local authPanel = sgl.Panel:new(1, 1, 51, 19)
-    authPanel:setTitle("Authorize ATM")
-    
-    local idLabel = sgl.Label:new(2, 2, "ATM ID:")
-    authPanel:addChild(idLabel)
-    
-    local idInput = sgl.Input:new(2, 3, 45)
-    authPanel:addChild(idInput)
-    
-    local freqLabel = sgl.Label:new(2, 5, "Void Chest Frequency:")
-    authPanel:addChild(freqLabel)
-    
-    local freqInput = sgl.Input:new(2, 6, 45)
-    authPanel:addChild(freqInput)
-    
-    local authorizeBtn = sgl.Button:new(10, 9, 30, 3, "Authorize")
-    authorizeBtn.style.bgColor = colors.green
-    authorizeBtn.onClick = function()
-        local atmID = idInput:getText()
-        local frequency = tonumber(freqInput:getText())
-        
-        if atmID == "" or not frequency then
-            showMessage("Invalid input", true)
-            return
-        end
-        
-        -- Generate secure authorization token
-        local crypto = require("/lib/crypto")
-        local token = crypto.generateToken()
-        
-        -- Store in config
-        config.management.authorizedATMs[atmID] = {
-            token = token,
-            frequency = frequency,
-            authorized = os.epoch("utc")
-        }
-        config.save()
-        
-        showMessage("ATM " .. atmID .. " authorized!\nToken: " .. token, false)
-        print("ATM " .. atmID .. " Auth Token: " .. token)
-    end
-    authPanel:addChild(authorizeBtn)
-    
-    local backBtn = sgl.Button:new(2, 16, 15, 2, "Back")
-    backBtn.onClick = function()
-        screens.atmManagement()
-    end
-    authPanel:addChild(backBtn)
-    
-    if statusMessage ~= "" then
-        local msgLabel = sgl.Label:new(2, 14, statusMessage)
-        msgLabel.style.fgColor = messageColor
-        authPanel:addChild(msgLabel)
-    end
-    
-    app:setRoot(authPanel)
-    app:setFocus(idInput)
+local exitBtn = sgl.Button:new(btnX, btnY + 12, btnWidth, btnHeight, "Exit")
+exitBtn.style.bgColor = colors.red
+exitBtn.onClick = function()
+    app:stop()
 end
+mainScreen:addChild(exitBtn)
 
--- List authorized ATMs
-function screens.listATMs()
-    local listPanel = sgl.Panel:new(1, 1, 51, 19)
-    listPanel:setTitle("Authorized ATMs")
-    
-    local y = 2
-    local count = 0
-    
-    for atmID, data in pairs(config.management.authorizedATMs) do
-        local label = sgl.Label:new(2, y, "ATM " .. atmID .. " - Freq: " .. data.frequency)
-        listPanel:addChild(label)
-        y = y + 1
-        count = count + 1
-        
-        if y > 14 then break end
-    end
-    
-    if count == 0 then
-        local noLabel = sgl.Label:new(2, 2, "No ATMs authorized")
-        noLabel.style.fgColor = colors.gray
-        listPanel:addChild(noLabel)
-    end
-    
-    local backBtn = sgl.Button:new(2, 16, 15, 2, "Back")
-    backBtn.onClick = function()
-        screens.atmManagement()
-    end
-    listPanel:addChild(backBtn)
-    
-    app:setRoot(listPanel)
+-- Accounts screen
+local accountsScreen = sgl.Panel:new(2, 2, 47, 15)
+accountsScreen:setBorder(false)
+accountsScreen:setVisible(false)
+accountsScreen.data = {isScreen = true, screenName = "accounts"}
+root:addChild(accountsScreen)
+
+local accountsTitle = sgl.Label:new(10, 1, "Account Management")
+accountsTitle.style.fgColor = colors.yellow
+accountsScreen:addChild(accountsTitle)
+
+local createAccBtn = sgl.Button:new(3, 3, 18, 2, "Create Account")
+createAccBtn.onClick = function()
+    showScreen("createAccount")
 end
+accountsScreen:addChild(createAccBtn)
 
--- Revoke ATM authorization
-function screens.revokeATM()
-    local revokePanel = sgl.Panel:new(1, 1, 51, 19)
-    revokePanel:setTitle("Revoke ATM")
-    
-    local idLabel = sgl.Label:new(2, 2, "ATM ID to revoke:")
-    revokePanel:addChild(idLabel)
-    
-    local idInput = sgl.Input:new(2, 3, 45)
-    revokePanel:addChild(idInput)
-    
-    local revokeBtn = sgl.Button:new(10, 6, 30, 3, "Revoke")
-    revokeBtn.style.bgColor = colors.red
-    revokeBtn.onClick = function()
-        local atmID = idInput:getText()
-        
-        if config.management.authorizedATMs[atmID] then
-            config.management.authorizedATMs[atmID] = nil
-            config.save()
-            showMessage("ATM " .. atmID .. " revoked", false)
-        else
-            showMessage("ATM not found", true)
-        end
-    end
-    revokePanel:addChild(revokeBtn)
-    
-    local backBtn = sgl.Button:new(2, 16, 15, 2, "Back")
-    backBtn.onClick = function()
-        screens.atmManagement()
-    end
-    revokePanel:addChild(backBtn)
-    
-    if statusMessage ~= "" then
-        local msgLabel = sgl.Label:new(2, 12, statusMessage)
-        msgLabel.style.fgColor = messageColor
-        revokePanel:addChild(msgLabel)
-    end
-    
-    app:setRoot(revokePanel)
-    app:setFocus(idInput)
+local listAccBtn = sgl.Button:new(23, 3, 18, 2, "List Accounts")
+listAccBtn.onClick = function()
+    showScreen("listAccounts")
 end
+accountsScreen:addChild(listAccBtn)
 
--- Main entry point
-local function main()
-    -- Check first run and show setup if needed
-    if not firstRunSetup() then
-        -- First run setup screen is showing, run the app
-        app:run()
+local accountsBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+accountsBackBtn.onClick = function()
+    showScreen("main")
+end
+accountsScreen:addChild(accountsBackBtn)
+
+-- Currency screen
+local currencyScreen = sgl.Panel:new(2, 2, 47, 15)
+currencyScreen:setBorder(false)
+currencyScreen:setVisible(false)
+currencyScreen.data = {isScreen = true, screenName = "currency"}
+root:addChild(currencyScreen)
+
+local currencyTitle = sgl.Label:new(10, 1, "Currency Minting")
+currencyTitle.style.fgColor = colors.yellow
+currencyScreen:addChild(currencyTitle)
+
+local currencyInfo = sgl.Label:new(2, 3, "Place items in mint chest")
+currencyScreen:addChild(currencyInfo)
+
+local amountLabel = sgl.Label:new(2, 5, "Amount to mint:")
+currencyScreen:addChild(amountLabel)
+
+local amountInput = sgl.Input:new(2, 6, 40)
+amountInput:setText("100")
+currencyScreen:addChild(amountInput)
+
+local mintBtn = sgl.Button:new(10, 8, 25, 2, "Mint Currency")
+mintBtn.style.bgColor = colors.green
+mintBtn.onClick = function()
+    -- Minting logic would go here
+    print("Minting...")
+end
+currencyScreen:addChild(mintBtn)
+
+local currencyBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+currencyBackBtn.onClick = function()
+    showScreen("main")
+end
+currencyScreen:addChild(currencyBackBtn)
+
+-- Stats screen
+local statsScreen = sgl.Panel:new(2, 2, 47, 15)
+statsScreen:setBorder(false)
+statsScreen:setVisible(false)
+statsScreen.data = {isScreen = true, screenName = "stats"}
+root:addChild(statsScreen)
+
+local statsTitle = sgl.Label:new(10, 1, "System Statistics")
+statsTitle.style.fgColor = colors.yellow
+statsScreen:addChild(statsTitle)
+
+local stat1 = sgl.Label:new(2, 3, "Total Accounts: 0")
+statsScreen:addChild(stat1)
+
+local stat2 = sgl.Label:new(2, 4, "Total Transactions: 0")
+statsScreen:addChild(stat2)
+
+local stat3 = sgl.Label:new(2, 5, "Currency Supply: 0 Credits")
+statsScreen:addChild(stat3)
+
+local statsBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+statsBackBtn.onClick = function()
+    showScreen("main")
+end
+statsScreen:addChild(statsBackBtn)
+
+-- ATM Management screen
+local atmScreen = sgl.Panel:new(2, 2, 47, 15)
+atmScreen:setBorder(false)
+atmScreen:setVisible(false)
+atmScreen.data = {isScreen = true, screenName = "atm"}
+root:addChild(atmScreen)
+
+local atmTitle = sgl.Label:new(10, 1, "ATM Management")
+atmTitle.style.fgColor = colors.yellow
+atmScreen:addChild(atmTitle)
+
+local authorizeBtn = sgl.Button:new(3, 3, 18, 2, "Authorize ATM")
+authorizeBtn.onClick = function()
+    showScreen("authorizeATM")
+end
+atmScreen:addChild(authorizeBtn)
+
+local listATMBtn = sgl.Button:new(23, 3, 18, 2, "List ATMs")
+listATMBtn.onClick = function()
+    showScreen("listATMs")
+end
+atmScreen:addChild(listATMBtn)
+
+local atmBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+atmBackBtn.onClick = function()
+    showScreen("main")
+end
+atmScreen:addChild(atmBackBtn)
+
+-- Authorize ATM screen
+local authorizeATMScreen = sgl.Panel:new(2, 2, 47, 15)
+authorizeATMScreen:setBorder(false)
+authorizeATMScreen:setVisible(false)
+authorizeATMScreen.data = {isScreen = true, screenName = "authorizeATM"}
+root:addChild(authorizeATMScreen)
+
+local authTitle = sgl.Label:new(10, 1, "Authorize ATM")
+authTitle.style.fgColor = colors.yellow
+authorizeATMScreen:addChild(authTitle)
+
+local idLabel = sgl.Label:new(2, 3, "ATM ID:")
+authorizeATMScreen:addChild(idLabel)
+
+local idInput = sgl.Input:new(2, 4, 40)
+authorizeATMScreen:addChild(idInput)
+
+local freqLabel = sgl.Label:new(2, 6, "Void Chest Frequency:")
+authorizeATMScreen:addChild(freqLabel)
+
+local freqInput = sgl.Input:new(2, 7, 40)
+authorizeATMScreen:addChild(freqInput)
+
+local authStatusLabel = sgl.Label:new(2, 9, "")
+authorizeATMScreen:addChild(authStatusLabel)
+
+local authBtn = sgl.Button:new(10, 11, 25, 2, "Authorize")
+authBtn.style.bgColor = colors.green
+authBtn.onClick = function()
+    local atmID = idInput:getText()
+    local frequency = tonumber(freqInput:getText())
+    
+    if atmID == "" or not frequency then
+        authStatusLabel:setText("Invalid input")
+        authStatusLabel.style.fgColor = colors.red
+        root:markDirty()
         return
     end
     
-    -- Start with login screen
-    screens.login()
-    app:run()
+    local token = crypto.generateToken()
+    config.management.authorizedATMs[atmID] = {
+        token = token,
+        frequency = frequency,
+        authorized = os.epoch("utc")
+    }
+    config.save()
+    
+    authStatusLabel:setText("ATM " .. atmID .. " authorized!")
+    authStatusLabel.style.fgColor = colors.green
+    print("ATM " .. atmID .. " Auth Token: " .. token)
+    root:markDirty()
 end
+authorizeATMScreen:addChild(authBtn)
 
--- Run application
-main()
+local authBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+authBackBtn.onClick = function()
+    showScreen("atm")
+end
+authorizeATMScreen:addChild(authBackBtn)
+
+-- List ATMs screen
+local listATMsScreen = sgl.Panel:new(2, 2, 47, 15)
+listATMsScreen:setBorder(false)
+listATMsScreen:setVisible(false)
+listATMsScreen.data = {isScreen = true, screenName = "listATMs"}
+root:addChild(listATMsScreen)
+
+local listATMTitle = sgl.Label:new(10, 1, "Authorized ATMs")
+listATMTitle.style.fgColor = colors.yellow
+listATMsScreen:addChild(listATMTitle)
+
+-- ATM list would be dynamically populated here
+local noATMLabel = sgl.Label:new(2, 3, "No ATMs authorized yet")
+noATMLabel.style.fgColor = colors.gray
+listATMsScreen:addChild(noATMLabel)
+
+local listATMBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+listATMBackBtn.onClick = function()
+    showScreen("atm")
+end
+listATMsScreen:addChild(listATMBackBtn)
+
+-- Create Account screen
+local createAccountScreen = sgl.Panel:new(2, 2, 47, 15)
+createAccountScreen:setBorder(false)
+createAccountScreen:setVisible(false)
+createAccountScreen.data = {isScreen = true, screenName = "createAccount"}
+root:addChild(createAccountScreen)
+
+local createAccTitle = sgl.Label:new(10, 1, "Create New Account")
+createAccTitle.style.fgColor = colors.yellow
+createAccountScreen:addChild(createAccTitle)
+
+local createAccBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+createAccBackBtn.onClick = function()
+    showScreen("accounts")
+end
+createAccountScreen:addChild(createAccBackBtn)
+
+-- List Accounts screen
+local listAccountsScreen = sgl.Panel:new(2, 2, 47, 15)
+listAccountsScreen:setBorder(false)
+listAccountsScreen:setVisible(false)
+listAccountsScreen.data = {isScreen = true, screenName = "listAccounts"}
+root:addChild(listAccountsScreen)
+
+local listAccTitle = sgl.Label:new(10, 1, "Account List")
+listAccTitle.style.fgColor = colors.yellow
+listAccountsScreen:addChild(listAccTitle)
+
+local listAccBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+listAccBackBtn.onClick = function()
+    showScreen("accounts")
+end
+listAccountsScreen:addChild(listAccBackBtn)
+
+-- Set root and run
+app:setRoot(root)
+app:setFocus(loginPasswordInput)
+showScreen("login")
+app:run()
+
+-- Cleanup
+term.clear()
+term.setCursorPos(1, 1)
+print("Management console closed!")
