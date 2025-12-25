@@ -94,14 +94,21 @@ local function firstRunSetup()
             config.management.masterPasswordSalt = passData.salt
             config.save()
             
-            showMessage("Setup complete!", false)
-            app:stop()
+            showMessage("Setup complete! Please login.", false)
+            authenticated = false
+            currentScreen = "login"
+            screens.login()
         end
         setupPanel:addChild(saveBtn)
         
+        if statusMessage ~= "" then
+            local msgLabel = sgl.Label:new(2, 15, statusMessage)
+            msgLabel.style.fgColor = messageColor
+            setupPanel:addChild(msgLabel)
+        end
+        
         app:setRoot(setupPanel)
         app:setFocus(passwordInput)
-        app:run()
         
         return false
     end
@@ -540,14 +547,22 @@ function screens.revokeATM()
     end
     revokePanel:addChild(backBtn)
     
-    app:setRoot(atmPanel)
+    if statusMessage ~= "" then
+        local msgLabel = sgl.Label:new(2, 12, statusMessage)
+        msgLabel.style.fgColor = messageColor
+        revokePanel:addChild(msgLabel)
+    end
+    
+    app:setRoot(revokePanel)
     app:setFocus(idInput)
 end
 
 -- Main entry point
 local function main()
-    -- Check first run
+    -- Check first run and show setup if needed
     if not firstRunSetup() then
+        -- First run setup screen is showing, run the app
+        app:run()
         return
     end
     
