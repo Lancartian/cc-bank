@@ -183,9 +183,22 @@ end
 function config.save(filename)
     filename = filename or "/config.json"
     
+    -- Create a serializable copy without functions
+    local serializable = {}
+    for section, values in pairs(config) do
+        if type(values) == "table" then
+            serializable[section] = {}
+            for key, value in pairs(values) do
+                if type(value) ~= "function" then
+                    serializable[section][key] = value
+                end
+            end
+        end
+    end
+    
     local file = fs.open(filename, "w")
     if file then
-        file.write(textutils.serialiseJSON(config))
+        file.write(textutils.serialiseJSON(serializable))
         file.close()
         return true
     end
