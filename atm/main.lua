@@ -1,10 +1,10 @@
 -- atm/main.lua
 -- ATM Frontend Client with SGL interface
 
-local sgl = require("lib.sgl.sgl")
+local sgl = require("lib/sgl/sgl")
 local config = require("config")
-local network = require("lib.network")
-local crypto = require("lib.crypto")
+local network = require("lib/network")
+local crypto = require("lib/crypto")
 
 -- Initialize config
 config.init()
