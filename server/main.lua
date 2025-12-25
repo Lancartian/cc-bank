@@ -258,6 +258,18 @@ end
 
 -- Authentication
 handlers[network.MSG.AUTH_REQUEST] = function(message, sender)
+    -- Check nonce to prevent replay attacks
+    local nonceValid, nonceErr = checkNonce(message.nonce, message.timestamp)
+    if not nonceValid then
+        return network.errorResponse("replay_attack", nonceErr or "Replay attack detected")
+    end
+    
+    -- Check rate limiting
+    local rateLimitOk, rateLimitErr = checkRateLimit(sender)
+    if not rateLimitOk then
+        return network.errorResponse("rate_limited", "Too many login attempts. Please wait.")
+    end
+    
     -- Decrypt credentials if encrypted
     local username, password
     

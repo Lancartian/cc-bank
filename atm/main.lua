@@ -256,37 +256,50 @@ loginBtn.onClick = function()
         return
     end
     
+    -- Check for AUTH_RESPONSE
+    if response.type ~= network.MSG.AUTH_RESPONSE then
+        loginStatusLabel:setText("Unexpected response type")
+        loginStatusLabel.style.fgColor = colors.red
+        passwordInput:setText("")
+        root:markDirty()
+        return
+    end
+    
     -- Response may be encrypted - try to decrypt if encryption key available
     local responseData = response.data
     if response.data.isEncrypted and response.data.encrypted then
         -- Try to decrypt with encryption key from registration
         if encryptionKey then
             local success, data = network.verifyMessage(response, encryptionKey, encryptionKey)
-            if success then
+            if success and data then
                 responseData = data
             end
         end
     end
     
-    if responseData and responseData.success then
-        sessionToken = responseData.token
-        accountNumber = responseData.accountNumber
-        username = responseData.username
-        balance = responseData.balance
-        
-        -- Update encryption key if provided
-        if responseData.encryptionKey then
-            encryptionKey = responseData.encryptionKey
-        end
-        
-        currentScreen = "menu"
-        showScreen("menu")
-    else
-        loginStatusLabel:setText("Login failed: " .. tostring(err))
+    if not responseData then
+        loginStatusLabel:setText("Failed to decrypt response")
         loginStatusLabel.style.fgColor = colors.red
         passwordInput:setText("")
         root:markDirty()
+        return
     end
+    
+    -- Extract login data
+    sessionToken = responseData.token
+    accountNumber = responseData.accountNumber
+    username = responseData.username
+    balance = responseData.balance
+    
+    -- Update encryption key if provided
+    if responseData.encryptionKey then
+        encryptionKey = responseData.encryptionKey
+    end
+    
+    -- Clear password and go to menu
+    passwordInput:setText("")
+    currentScreen = "menu"
+    showScreen("menu")
 end
 loginScreen:addChild(loginBtn)
 
