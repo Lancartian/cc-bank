@@ -33,17 +33,23 @@ A comprehensive, secure banking system for ComputerCraft with military-grade enc
 - **PIN support**: Optional PIN codes for ATM access
 
 ### 🏦 Physical Currency System
+- **Signed Book Currency**: Uses signed books (written_book) to prevent forgery - signatures cannot be faked
 - **NBT-based verification**: Each currency item has a unique NBT hash for authenticity
-- **Minting system**: Mint new currency with automatic database registration
-- **Currency verification**: Validate currency authenticity before accepting
-- **Supply tracking**: Monitor total currency supply and minted items
+- **Denomination system**: Support for different bill values (1, 5, 10, 20, 50, 100 Credits)
+- **Smart dispensing**: Automatically selects appropriate bills for withdrawals
+- **Minting system**: Worker creates, writes, and signs books to mint new currency
+- **Currency verification**: Validate currency authenticity before accepting using NBT hash
+- **Supply tracking**: Monitor total currency supply and minted items by denomination
+- **Peripheral network**: All inventory management via wired modem network using inventory API
 
 ### 🏧 ATM Network
-- **Multiple ATMs**: Support for up to 6 ATMs with unique void chest frequencies
+- **Multiple ATMs**: Support for up to 16 ATMs with unique void chest frequencies
+- **Interface Only**: ATMs have no inventory - they're just user interface terminals
+- **Analog Redstone Control**: Uses signal strength 0-15 for ATM selection
 - **Authorization Required**: Only manager-authorized ATMs can register
 - **User-friendly interface**: Beautiful SGL-based touch interface
 - **Complete functionality**: Withdraw, deposit, transfer, and balance checks
-- **Void chest integration**: Automatic currency transfer via frequency-matched void chests
+- **Void chest integration**: Backend pushes to void chests, Create Utilities handles delivery
 
 ### 🎮 Management Console
 - **Admin interface**: Easy-to-use management console with SGL interface
@@ -56,7 +62,8 @@ A comprehensive, secure banking system for ComputerCraft with military-grade enc
 
 - **ComputerCraft: Tweaked** (or CC: Restitched)
 - **Create Mod** with **Create Utilities** addon (for void chests with frequency system)
-- **Wireless Modem** on all computers
+- **Wired Modems** and **Networking Cables** to connect all chests to the server
+- **Wireless Modem** on server, management console, and ATMs for communication
 - **Monitor** (optional, recommended for better display)
 
 ## Installation
@@ -73,8 +80,7 @@ installer install
 ### 2. Download CC-Bank
 
 Option A - Using wget (recommended):
-```lua
--- Download and run installer
+```
 wget run https://raw.githubusercontent.com/Lancartian/cc-bank/main/install.lua
 ```
 
@@ -96,18 +102,21 @@ Option B - Manual installation:
 
 1. **Hardware Setup**:
    - Place a computer (advanced recommended)
-   - Attach a wireless modem (any side)
-   - Attach a chest for currency storage (default: bottom)
-   - Set up multiple void chests for ATM dispensing (see [Void Chest Configuration](#void-chest-configuration))
-   - Connect hoppers/droppers from chest to void chests with redstone control
+   - Attach a wireless modem (for network communication with ATMs/management)
+   - Attach a wired modem (for peripheral network - inventory management)
+   - Connect chests to the peripheral network using networking cables and wired modems:
+     * 1 MINT chest (place paper named "MINT" inside)
+     * 1 OUTPUT chest (place paper named "OUTPUT" inside)
+     * 6 denomination chests (place papers named "1", "5", "10", "20", "50", "100" inside)
+     * 16 void chests for ATMs (name peripherals as "atm1", "atm2", etc. or "void_1", "void_2", etc.)
+   - **Important**: Do NOT directly attach chests to the computer - only via wired modem network
+   - Set void chest frequencies by placing two items in each void chest's frequency slots
 
 2. **Software Setup**:
-   ```lua
+   ```
    cd /
    edit config.lua
-   -- Configure server settings (port, data directory, etc.)
    
-   -- Run server
    server/main
    ```
 
@@ -145,7 +154,7 @@ Option B - Manual installation:
    - Set up currency collection mechanism (conveyor belt from void chest to customer pickup)
 
 2. **Get Authorization**:
-   ```lua
+   ```
    -- On management console first:
    1. Login with master password
    2. Navigate to "ATM Management" > "Authorize ATM"
@@ -173,7 +182,76 @@ Option B - Manual installation:
 
 ## Void Chest Configuration
 
-**How Create Utilities Void Chests Work**:
+### Peripheral Network Setup
+
+**All inventory management is handled via the peripheral network using wired modems and networking cables. This provides:**
+- Direct item transfer using `pushItems()` and `pullItems()` from CC:Tweaked's inventory API
+- No redstone required for routing
+- Automatic chest detection and registration
+- Clean, deterministic item transfers
+
+**Network Architecture**:
+```
+                    [Server Computer]
+                          │
+                    [Wired Modem]
+                          │
+              ┌───────────┴───────────┐
+              │   Networking Cables   │
+              │                       │
+    ┌─────────┼────────┬───────┬──────┼─────┬─────┐
+    │         │        │       │      │     │     │
+[Wired    [Wired   [Wired [Wired [Wired [Wired [Wired
+ Modem]    Modem]   Modem] Modem] Modem] Modem] Modem]
+    │         │        │       │      │     │     │
+[MINT]    [OUTPUT]  [$1]    [$5]  [$10] [Void] [Void]
+[Chest]   [Chest]  [Chest] [Chest][Chest][Chest][Chest]
+                                            │      │
+                                          ATM #1 ATM #2
+```
+
+**Important Rules**:
+1. **Never attach chests directly to the computer** - always use wired modem + networking cable
+2. **Chest identification**: Place renamed paper inside chests to identify their purpose
+3. **Void chest naming**: Name void chest peripherals with ATM ID (e.g., "atm1", "void_2")
+
+### Chest Registration with Paper Markers
+
+The system automatically scans the peripheral network and identifies chests by paper items placed inside them:
+
+**Special Chest Markers**:
+- **MINT chest**: Place a paper renamed to "MINT" inside
+- **OUTPUT chest**: Place a paper renamed to "OUTPUT" inside
+- **Denomination chests**: Place papers with the denomination number in the name
+  * The system extracts numbers from the display name and matches against valid denominations (1, 5, 10, 20, 50, 100)
+  * Examples that work:
+    - "1" → $1 chest
+    - "5 dollar bills" → $5 chest
+    - "my 10 note chest" → $10 chest
+    - "$20" → $20 chest
+    - "50credits" → $50 chest
+    - "100 Credit Bills" → $100 chest
+  * Any paper containing a valid denomination number will work - other text is ignored
+- **ATM void chests**: Place papers with "ATM" followed by the ATM number
+  * The system searches for "ATM" followed by a number (1-16) in the display name
+  * Examples that work:
+    - "ATM1" → ATM #1 void chest
+    - "ATM 5" → ATM #5 void chest
+    - "atm_10" → ATM #10 void chest
+    - "This is ATM 3 chest" → ATM #3 void chest
+  * Each ATM (1-16) needs its own void chest with a unique marker
+
+**How to create marker papers**:
+1. Place paper in anvil
+2. Rename it to include the marker:
+   - "MINT" or "OUTPUT" for special chests
+   - Any denomination number (1, 5, 10, 20, 50, 100) for denomination chests
+   - "ATM" + number (1-16) for void chests
+3. Place the renamed paper in the chest
+4. The system will automatically detect it during network scan
+5. Flexible naming - the system searches for the required numbers/keywords and ignores other text
+
+### How Create Utilities Void Chests Work
 - Void chests with the SAME frequency can transfer items wirelessly
 - Frequency is set by placing TWO ITEMS in the frequency slots of the void chest (in-game)
 - The combination of these two items determines the frequency (e.g., stone + dirt, iron + gold)
@@ -181,63 +259,146 @@ Option B - Manual installation:
 - Right click on the bottom slot to claim the void chest in order to prevent tampering
 
 **Server Side Setup**:
-1. Place multiple void chests near the server computer
-2. Set each void chest to a UNIQUE frequency by placing two items in its frequency slots
+1. Connect 16 void chests to the peripheral network with wired modems
+2. Place a paper marker in each void chest with its ATM number:
+   - ATM #1 void chest: paper renamed "ATM1" or "ATM 1"
+   - ATM #2 void chest: paper renamed "ATM2" or "ATM 2"
+   - ... up to ATM #16
+3. Set each void chest to a UNIQUE frequency by placing two items in its frequency slots
    - Example: ATM #1 = Stone + Stone, ATM #2 = Stone + Dirt, ATM #3 = Stone + Cobblestone
-3. Connect each void chest to the main currency storage
-4. Wire redstone from server computer to control which void chest gets chosen
-5. When dispensing to ATM #1, server activates redstone to conveyor leading to ATM #1's void chest
+4. Backend will automatically detect and use the correct void chest based on the paper marker
+5. Backend pushes items directly to the correct void chest using `pushItems()`
 
 **ATM Side Setup**:
 1. Place void chest at ATM location
-2. Set frequency to match the corresponding server void chest by placing the SAME TWO ITEMS in frequency slots
+2. Set frequency to match the corresponding server void chest by placing the SAME TWO ITEMS
    - Example: If server ATM #1 void chest has Stone + Stone, ATM void chest must also have Stone + Stone
 3. Items pushed into server's void chest will instantly appear in ATM's matching void chest
-4. Connect void chest to conveyor belt or collection point for customer pickup
+4. Connect void chest to collection point for customer pickup
 
 **Example Setup for 3 ATMs**:
 ```
-SERVER:
-Currency Storage Chest
-    ↓ (conveyors with redstone control)
-├─→ Void Chest (Freq: Stone+Stone) ←→ Wireless Transfer ←→ ATM #1 Void Chest (Stone+Stone)
-├─→ Void Chest (Freq: Stone+Dirt) ←→ Wireless Transfer ←→ ATM #2 Void Chest (Stone+Dirt)
-└─→ Void Chest (Freq: Stone+Cobble) ←→ Wireless Transfer ←→ ATM #3 Void Chest (Stone+Cobble)
+SERVER PERIPHERAL NETWORK:
+[MINT Chest] [OUTPUT Chest] [$1 Chest] [$5 Chest] ... [Void atm1] [Void atm2] [Void atm3]
+     │             │              │          │              │           │           │
+     └─────────────┴──────────────┴──────────┴──────────────┴───────────┴───────────┘
+                                    │
+                            [Wired Modem Network]
+                                    │
+                            [Server Computer]
+
+BACKEND PROCESS:
+1. User withdraws $125 at ATM #1
+2. Backend calculates: 1×$100 + 1×$20 + 1×$5
+3. Backend pulls $100 bill from [$100 Chest] → [OUTPUT Chest]
+4. Backend pulls $20 bill from [$20 Chest] → [OUTPUT Chest]
+5. Backend pulls $5 bill from [$5 Chest] → [OUTPUT Chest]
+6. Backend pushes all bills from [OUTPUT Chest] → [Void atm1]
+7. Void chest frequency matching → Items appear in ATM #1's void chest
+8. Customer collects bills from ATM #1
+
+VOID CHEST FREQUENCIES:
+Server [Void atm1] (Stone+Stone) ←→ Wireless ←→ ATM #1 [Void Chest] (Stone+Stone)
+Server [Void atm2] (Stone+Dirt)  ←→ Wireless ←→ ATM #2 [Void Chest] (Stone+Dirt)
+Server [Void atm3] (Stone+Cobble)←→ Wireless ←→ ATM #3 [Void Chest] (Stone+Cobble)
 ```
 
-**Redstone Control**:
-- The server's redstone controls which hopper/dropper pushes items into which void chest
-- Void chest frequencies are set in the Create Utilities GUI (NOT via redstone)
-- Each ATM (1-6) uses one computer side: left, right, front, back, top, bottom
-- ATM ID determines which redstone side activates
-- **Maximum 6 ATMs** without additional mods (one per computer side)
+### How Inventory API Ensures Correct Amounts
+
+The system uses ComputerCraft's peripheral inventory API for deterministic item transfers:
+
+**Key Functions Used**:
+- `peripheral.wrap(name)` - Access chest as peripheral
+- `chest.list()` - Get all items in chest
+- `chest.getItemDetail(slot)` - Get NBT hash and item details
+- `chest.pushItems(targetName, slot, count)` - Transfer specific items to target chest
+
+**Why This is Better Than Redstone**:
+1. **Direct control**: No timing issues or mechanical failures
+2. **Exact counts**: Transfer exactly N items, no more, no less
+3. **NBT awareness**: Can verify each bill's NBT hash before transfer
+4. **Deterministic**: pushItems() returns exact number of items moved
+5. **Network-based**: All chests accessible via single peripheral network
+
+**Transfer Process**:
+```lua
+-- Step 1: Calculate bills needed
+amount = 125
+bills_needed = {1×$100, 1×$20, 1×$5}
+
+-- Step 2: Pull from denomination chests to OUTPUT chest
+$100_chest.pushItems("OUTPUT_chest", slot, 1)  -- Returns 1 (success)
+$20_chest.pushItems("OUTPUT_chest", slot, 1)   -- Returns 1 (success)
+$5_chest.pushItems("OUTPUT_chest", slot, 1)    -- Returns 1 (success)
+
+-- Step 3: Push from OUTPUT chest to ATM void chest
+OUTPUT_chest.pushItems("void_atm1", slot, 3)  -- Returns 3 (all bills moved)
+
+-- Step 4: Void chest frequency matching handles wireless transfer
+```
+
+**Verification**:
+- Each `pushItems()` call returns the actual number of items transferred
+- Backend can verify transfer success before proceeding
+- If any transfer fails, withdrawal is rolled back
+- Transaction log records exact bills dispensed with their NBT hashes
 
 ## Currency Minting
 
+### How Currency Works
+
+CC-Bank uses **signed books (written_book)** as currency for built-in forgery prevention:
+
+1. **Creation Process**:
+   - A worker creates a new book and quill
+   - Writes content into the book (bank name, denomination, serial number, etc.)
+   - **Signs the book** - this is the critical security step
+   - Signing adds the author's signature to the NBT data
+   - This signature **cannot be forged** without the original author account
+
+2. **NBT Hash Verification**:
+   - ComputerCraft's `getItemDetail()` API returns an `nbt` field
+   - This field is already a **hash string** representing the item's NBT data
+   - For signed books, this includes the author signature, making each book unique
+   - The backend stores this hash in the currency database
+   - Only bills with registered NBT hashes are accepted as valid currency
+
+3. **Why Signed Books?**:
+   - Unsigned books/paper can be copied by anyone
+   - Signed books require the original author to sign (cannot be duplicated)
+   - Each signed book has a unique NBT hash
+   - Perfect for unforgeable physical currency in Minecraft
+
 ### Currency Minting Process
 
-1. **Prepare Items**:
-   - Place currency in mint chest (default: bottom of server)
-   - Items MUST have unique NBT data
+1. **Prepare Signed Books**:
+   - Have a worker (player) create books and sign them with denominations
+   - Example: Write "100 Credit Note - Serial #001" and sign
+   - Place signed books in the server's mint chest (default: bottom side)
+   - Each denomination should go in its corresponding chest
 
 2. **Mint Currency**:
    - Open management console
    - Login with master password
    - Navigate to "Mint Currency"
-   - Enter amount to mint
+   - Select denomination and enter amount to mint
    - Press "Mint Currency" button
-   - System will scan chest and register all valid items with NBT tags
+   - System will scan chest and register all valid signed books with their NBT hashes
 
 3. **Verification**:
-   - Each item's NBT hash is recorded in currency database
+   - Each signed book's NBT hash is recorded in currency database
    - Only registered currency is accepted by the system
    - Currency can be tracked and invalidated if needed
    - Database stored in `/data/currency.json`
 
 4. **Distribution**:
    - Minted currency can be withdrawn from ATMs
-   - Server automatically dispenses correct currency via void chests
-   - Currency is verified on every transaction
+   - Backend automatically:
+     * Selects appropriate denominations for the withdrawal amount
+     * Activates input-side redstone to select denomination chest
+     * Activates output-side redstone to select ATM void chest
+     * Items transfer via Create Utilities void chest frequency matching
+   - Currency is verified on every transaction using NBT hash
 
 ## Usage
 
@@ -736,28 +897,82 @@ config.server.port = 42000  -- Network port
 config.server.sessionTimeout = 300  -- 5 minutes
 config.management.maxLoginAttempts = 3
 
--- Management
-config.management.redstoneStartSide = "left"  -- Redstone control side
-config.management.maxATMs = 6  -- Maximum 6 ATMs (one per side)
+-- Management & Peripheral Network
+config.management.maxATMs = 16  -- Maximum 16 ATMs supported
+config.management.maxDenominations = 6  -- Number of denomination chests
 config.management.requireATMAuth = true  -- Require ATM authorization
 
 -- ATM
-config.atm.id = 1  -- Unique ATM ID
-config.atm.frequency = 1  -- Reference only - actual frequency set by items in void chest
-config.atm.authToken = "..."  -- Authorization token from management
-
--- Security
-config.security.encryptionKey = "..."  -- Auto-generated
-config.security.encryptSensitiveData = true
-config.security.requireMessageSignatures = true
-config.security.replayProtectionWindow = 30  -- seconds
+config.atm.id = 1  -- Unique ATM ID (1-16)
+config.atm.frequency = 1  -- Reference only - actual frequency set by placing two items in void chest GUI
+config.atm.authToken = "..."  -- Authorization token from management console (required)
 
 -- Currency
-config.currency.itemName = "minecraft:gold_ingot"
-config.currency.displayName = "Credit"
-config.currency.displayNamePlural = "Credits"
-config.currency.requireNBT = true
+config.currency.itemName = "minecraft:written_book"  -- Signed books prevent forgery
+config.currency.preferLargeBills = true  -- Use largest bills first when dispensing
+config.currency.denominations = {  -- Bill values: 1, 5, 10, 20, 50, 100
+    {value = 1, name = "1 Credit", color = "white"},
+    {value = 5, name = "5 Credits", color = "green"},
+    {value = 10, name = "10 Credits", color = "blue"},
+    {value = 20, name = "20 Credits", color = "purple"},
+    {value = 50, name = "50 Credits", color = "orange"},
+    {value = 100, name = "100 Credits", color = "red"}
+}
+
+-- Security
+config.security.encryptionKey = "..."  -- Auto-generated on first run
+config.security.encryptSensitiveData = true  -- Encrypt passwords/balances in transit
+config.security.requireMessageSignatures = true  -- HMAC signature verification
+config.security.replayProtectionWindow = 30  -- Reject messages older than 30 seconds
 ```
+
+### How the Peripheral Network System Works
+
+The backend controls all currency movement using **ComputerCraft's peripheral network and inventory API**:
+
+**Network Setup**:
+1. All chests connected to server via wired modems and networking cables
+2. Chests identified by paper markers placed inside them
+3. No direct chest attachments to computer (only via network)
+4. Void chests named with ATM IDs (e.g., "atm1", "void_2")
+
+**Dispensing Process**:
+  Signal 2 → $10 bills chest
+  Signal 3 → $20 bills chest
+  Signal 4 → $50 bills chest
+  Signal 5 → $100 bills chest
+  ```
+- Backend automatically calculates which bills are needed for the withdrawal amount
+- Activates each denomination chest sequentially to dispense the correct bills
+
+**2. Output Side (ATM Selection)**:
+- Controls which ATM void chest to send the currency to
+- Signal strength 0-15 selects one of 16 ATM void chests:
+  ```
+**Dispensing Process**:
+1. User requests $125 withdrawal at ATM #3
+2. Backend calculates bills needed: 1×$100 + 1×$20 + 1×$5
+3. Backend uses `pushItems()` to transfer:
+   - Pull 1×$100 from [$100 Chest] → [OUTPUT Chest]
+   - Pull 1×$20 from [$20 Chest] → [OUTPUT Chest]
+   - Pull 1×$5 from [$5 Chest] → [OUTPUT Chest]
+4. Backend transfers from [OUTPUT Chest] → [Void atm3]
+5. Void chest frequency matching → Bills appear at ATM #3
+6. Customer collects bills
+
+**Key Functions**:
+- `peripheral.getNames()` - Scan for all peripherals on network
+- `peripheral.wrap(name)` - Access chest as peripheral
+- `chest.list()` - List all items
+- `chest.getItemDetail(slot)` - Get NBT hash
+- `chest.pushItems(target, slot, count)` - Transfer exact count of items
+
+**Benefits**:
+- No redstone timing issues
+- Exact item counts guaranteed
+- NBT verification on every transfer
+- Deterministic and traceable
+- Network-based architecture scales easily
 
 ## Contributing
 
