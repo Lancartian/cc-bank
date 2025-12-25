@@ -53,7 +53,7 @@ A comprehensive, secure banking system for ComputerCraft with military-grade enc
 ### 🎮 Management Console
 - **Admin interface**: Easy-to-use management console with SGL interface
 - **Account administration**: Create accounts, adjust balances, manage users
-- **Currency minting**: Mint new currency with button press
+- **Automatic currency minting**: Name signed books with denomination, system reads and sorts them automatically
 - **System monitoring**: View statistics, transaction history, ATM status
 - **ATM Management**: Authorize new ATMs, view registered ATMs, revoke access
 
@@ -373,18 +373,23 @@ CC-Bank uses **signed books (written_book)** as currency for built-in forgery pr
 ### Currency Minting Process
 
 1. **Prepare Signed Books**:
-   - Have a worker (player) create books and sign them with denominations
-   - Example: Write "100 Credit Note - Serial #001" and sign
-   - Place signed books in the server's mint chest (default: bottom side)
-   - Each denomination should go in its corresponding chest
+   - Have a worker (player) create books and sign them
+   - **Name each book with its denomination value** (e.g., "1 Token", "5 Credits", "100 Notes")
+   - The system extracts the first number from the book's display name
+   - Examples: "5 Credits", "10 Dollar Bill", "100", "my 50 note" all work
+   - Place all signed books in the server's MINT chest (connected via wired modem)
 
 2. **Mint Currency**:
    - Open management console
    - Login with master password
    - Navigate to "Mint Currency"
-   - Select denomination and enter amount to mint
-   - Press "Mint Currency" button
-   - System will scan chest and register all valid signed books with their NBT hashes
+   - Press "Process Mint Chest" button
+   - System automatically:
+     * Scans all books in the MINT chest
+     * Parses denomination from each book's display name
+     * Registers each book's NBT hash in the currency database
+     * Sorts books into appropriate denomination chests
+     * Reports total amount minted and number of books processed
 
 3. **Verification**:
    - Each signed book's NBT hash is recorded in currency database
@@ -459,11 +464,11 @@ CC-Bank uses **signed books (written_book)** as currency for built-in forgery pr
    - 10-digit account number generated automatically
 
 4. **Mint Currency**:
-   - Place items with NBT tags in mint chest
+   - Have workers create and sign books with denomination in the name (e.g., "5 Credits")
+   - Place signed books in the MINT chest (connected to server)
    - Navigate to "Mint Currency"
-   - Enter amount to mint
-   - Touch "Mint Currency"
-   - Currency is registered in database
+   - Touch "Process Mint Chest"
+   - System reads book names, registers NBT hashes, and sorts to denomination chests automatically
 
 5. **View Statistics**:
    - Navigate to "View Statistics"
@@ -608,7 +613,14 @@ accounts.updateBalance("1234567890", 50)    -- Add 50
 
 ### Currency API (`server/currency.lua`)
 
-**currency.mint(amount, denomination)** - Mint new currency
+**currency.mintAndSort()** - Automatically mint and sort currency from MINT chest
+```lua
+local result, err = currency.mintAndSort()
+-- Returns: {totalAmount, processedCount, mintedByDenom, sortResults}
+-- Reads book names, registers NBT hashes, sorts to denomination chests
+```
+
+**currency.mint(amount, denomination)** - Legacy manual minting (kept for compatibility)
 ```lua
 currency.mint(100, 1)  -- Mint 100 credits
 ```
