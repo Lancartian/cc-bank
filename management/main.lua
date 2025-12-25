@@ -63,6 +63,7 @@ end
 -- First run setup screen
 local setupScreen = sgl.Panel:new(2, 2, 47, 15)
 setupScreen:setBorder(false)
+setupScreen:setVisible(false)
 setupScreen.data = {isScreen = true, screenName = "setup"}
 root:addChild(setupScreen)
 
@@ -124,6 +125,7 @@ setupScreen:addChild(saveBtn)
 -- Login screen
 local loginScreen = sgl.Panel:new(2, 2, 47, 15)
 loginScreen:setBorder(false)
+loginScreen:setVisible(false)
 loginScreen.data = {isScreen = true, screenName = "login"}
 root:addChild(loginScreen)
 

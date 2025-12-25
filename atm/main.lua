@@ -106,449 +106,518 @@ end
 -- Create application
 local app = sgl.createApplication(config.atm.displayName)
 
--- Screens
-local screens = {}
+-- Create root panel
+local root = sgl.Panel:new(1, 1, 51, 19)
+root:setTitle(config.atm.displayName)
+root:setBorder(true)
+
+-- Utility function to show screen
+local function showScreen(screenName)
+    for i = 1, #root.children do
+        local child = root.children[i]
+        if child.data and child.data.isScreen then
+            child:setVisible(child.data.screenName == screenName)
+        end
+    end
+    root:markDirty()
+end
 
 -- Welcome screen
-function screens.welcome()
-    local welcomePanel = sgl.Panel:new(1, 1, 51, 19)
-    welcomePanel:setTitle(config.atm.displayName)
+local welcomeScreen = sgl.Panel:new(2, 2, 47, 15)
+welcomeScreen:setBorder(false)
+welcomeScreen:setVisible(false)
+welcomeScreen.data = {isScreen = true, screenName = "welcome"}
+root:addChild(welcomeScreen)
     
-    local titleLabel = sgl.Label:new(5, 4, config.atm.welcomeMessage)
-    titleLabel.style.fgColor = colors.yellow
-    welcomePanel:addChild(titleLabel)
-    
-    local infoLabel = sgl.Label:new(8, 7, "Secure Banking Services")
-    infoLabel.style.fgColor = colors.lightBlue
-    welcomePanel:addChild(infoLabel)
-    
-    local startBtn = sgl.Button:new(10, 10, 30, 3, "Touch to Begin")
-    startBtn.style.bgColor = colors.green
-    startBtn.onClick = function()
-        currentScreen = "login"
-        screens.login()
-    end
-    welcomePanel:addChild(startBtn)
-    
-    local atmInfo = sgl.Label:new(2, 17, "ATM ID: " .. atmID)
-    atmInfo.style.fgColor = colors.gray
-    welcomePanel:addChild(atmInfo)
-    
-    app:setRoot(welcomePanel)
+local titleLabel = sgl.Label:new(5, 3, config.atm.welcomeMessage)
+titleLabel.style.fgColor = colors.yellow
+welcomeScreen:addChild(titleLabel)
+
+local infoLabel = sgl.Label:new(8, 6, "Secure Banking Services")
+infoLabel.style.fgColor = colors.lightBlue
+welcomeScreen:addChild(infoLabel)
+
+local startBtn = sgl.Button:new(8, 9, 30, 3, "Touch to Begin")
+startBtn.style.bgColor = colors.green
+startBtn.onClick = function()
+    currentScreen = "login"
+    showScreen("login")
 end
+welcomeScreen:addChild(startBtn)
+
+local atmInfo = sgl.Label:new(2, 14, "ATM ID: " .. atmID)
+atmInfo.style.fgColor = colors.gray
+welcomeScreen:addChild(atmInfo)
 
 -- Login screen
-function screens.login()
-    local loginPanel = sgl.Panel:new(1, 1, 51, 19)
-    loginPanel:setTitle("Login")
+local loginScreen = sgl.Panel:new(2, 2, 47, 15)
+loginScreen:setBorder(false)
+loginScreen:setVisible(false)
+loginScreen.data = {isScreen = true, screenName = "login"}
+root:addChild(loginScreen)
+
+local usernameLabel = sgl.Label:new(2, 1, "Username:")
+loginScreen:addChild(usernameLabel)
+
+local usernameInput = sgl.Input:new(2, 2, 43)
+loginScreen:addChild(usernameInput)
+
+local passwordLabel = sgl.Label:new(2, 4, "Password:")
+loginScreen:addChild(passwordLabel)
+
+local passwordInput = sgl.Input:new(2, 5, 43)
+passwordInput:setMasked(true)
+loginScreen:addChild(passwordInput)
+
+local loginStatusLabel = sgl.Label:new(2, 13, "")
+loginScreen:addChild(loginStatusLabel)
+
+local loginBtn = sgl.Button:new(8, 8, 30, 3, "Login")
+loginBtn.style.bgColor = colors.green
+loginBtn.onClick = function()
+    local user = usernameInput:getText()
+    local pass = passwordInput:getText()
     
-    local usernameLabel = sgl.Label:new(2, 2, "Username:")
-    loginPanel:addChild(usernameLabel)
-    
-    local usernameInput = sgl.Input:new(2, 3, 45)
-    loginPanel:addChild(usernameInput)
-    
-    local passwordLabel = sgl.Label:new(2, 5, "Password:")
-    loginPanel:addChild(passwordLabel)
-    
-    local passwordInput = sgl.Input:new(2, 6, 45)
-    passwordInput:setMasked(true)
-    loginPanel:addChild(passwordInput)
-    
-    local loginBtn = sgl.Button:new(10, 9, 30, 3, "Login")
-    loginBtn.style.bgColor = colors.green
-    loginBtn.onClick = function()
-        local user = usernameInput:getText()
-        local pass = passwordInput:getText()
-        
-        if user == "" or pass == "" then
-            showMessage("Please enter username and password", true)
-            return
-        end
-        
-        showMessage("Authenticating...", false)
-        
-        -- Create encrypted authentication request
-        local message = network.createMessage(network.MSG.AUTH_REQUEST, {
-            username = user,
-            password = pass
-        }, nil, encryptionKey)
-        
-        network.broadcast(modem, config.server.port, message)
-        
-        local response, err = network.receive(config.atm.port, 5)
-        if not response then
-            showMessage("Connection error: " .. tostring(err), true)
-            return
-        end
-        
-        if response.type == network.MSG.ERROR then
-            showMessage("Login failed: " .. tostring(response.data.message), true)
-            passwordInput:setText("")
-            return
-        end
-        
-        -- Decrypt response
-        local success, data = network.verifyMessage(response, encryptionKey, encryptionKey)
-        if not success then
-            showMessage("Security error", true)
-            return
-        end
-        
-        local response = data or response.data
-        
-        if response and response.success then
-            sessionToken = response.token
-            accountNumber = response.accountNumber
-            username = response.username
-            balance = response.balance
-            
-            currentScreen = "menu"
-            screens.menu()
-        else
-            showMessage("Login failed: " .. tostring(err), true)
-            passwordInput:setText("")
-        end
-    end
-    loginPanel:addChild(loginBtn)
-    
-    local cancelBtn = sgl.Button:new(10, 13, 30, 2, "Cancel")
-    cancelBtn.onClick = function()
-        currentScreen = "welcome"
-        screens.welcome()
-    end
-    loginPanel:addChild(cancelBtn)
-    
-    if statusMessage ~= "" then
-        local msgLabel = sgl.Label:new(2, 16, statusMessage)
-        msgLabel.style.fgColor = messageColor
-        loginPanel:addChild(msgLabel)
+    if user == "" or pass == "" then
+        loginStatusLabel:setText("Please enter username and password")
+        loginStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
     end
     
-    app:setRoot(loginPanel)
-    app:setFocus(usernameInput)
+    loginStatusLabel:setText("Authenticating...")
+    loginStatusLabel.style.fgColor = colors.white
+    root:markDirty()
+    
+    -- Create encrypted authentication request
+    local message = network.createMessage(network.MSG.AUTH_REQUEST, {
+        username = user,
+        password = pass
+    }, nil, encryptionKey)
+    
+    network.broadcast(modem, config.server.port, message)
+    
+    local response, err = network.receive(config.atm.port, 5)
+    if not response then
+        loginStatusLabel:setText("Connection error: " .. tostring(err))
+        loginStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    if response.type == network.MSG.ERROR then
+        loginStatusLabel:setText("Login failed: " .. tostring(response.data.message))
+        loginStatusLabel.style.fgColor = colors.red
+        passwordInput:setText("")
+        root:markDirty()
+        return
+    end
+    
+    -- Decrypt response
+    local success, data = network.verifyMessage(response, encryptionKey, encryptionKey)
+    if not success then
+        loginStatusLabel:setText("Security error")
+        loginStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    local response = data or response.data
+    
+    if response and response.success then
+        sessionToken = response.token
+        accountNumber = response.accountNumber
+        username = response.username
+        balance = response.balance
+        
+        currentScreen = "menu"
+        
+        -- Update welcome label and balance label on menu screen
+        welcomeLabel:setText("Welcome, " .. username)
+        balanceLabel:setText("Balance: " .. balance .. " " .. config.currency.displayNamePlural)
+        
+        showScreen("menu")
+    else
+        loginStatusLabel:setText("Login failed: " .. tostring(err))
+        loginStatusLabel.style.fgColor = colors.red
+        passwordInput:setText("")
+        root:markDirty()
+    end
 end
+loginScreen:addChild(loginBtn)
+
+local cancelBtn = sgl.Button:new(8, 12, 30, 2, "Cancel")
+cancelBtn.onClick = function()
+    usernameInput:setText("")
+    passwordInput:setText("")
+    loginStatusLabel:setText("")
+    currentScreen = "welcome"
+    showScreen("welcome")
+end
+loginScreen:addChild(cancelBtn)
 
 -- Main menu screen
-function screens.menu()
-    local menuPanel = sgl.Panel:new(1, 1, 51, 19)
-    menuPanel:setTitle("Main Menu")
+local menuScreen = sgl.Panel:new(2, 2, 47, 15)
+menuScreen:setBorder(false)
+menuScreen:setVisible(false)
+menuScreen.data = {isScreen = true, screenName = "menu"}
+root:addChild(menuScreen)
+
+local welcomeLabel = sgl.Label:new(2, 1, "Welcome")
+welcomeLabel.style.fgColor = colors.yellow
+menuScreen:addChild(welcomeLabel)
+
+local balanceLabel = sgl.Label:new(2, 2, "Balance: 0")
+balanceLabel.style.fgColor = colors.lightBlue
+menuScreen:addChild(balanceLabel)
     
-    local welcomeLabel = sgl.Label:new(2, 2, "Welcome, " .. username)
-    welcomeLabel.style.fgColor = colors.yellow
-    menuPanel:addChild(welcomeLabel)
-    
-    local balanceLabel = sgl.Label:new(2, 3, "Balance: " .. balance .. " " .. config.currency.displayNamePlural)
-    balanceLabel.style.fgColor = colors.lightBlue
-    menuPanel:addChild(balanceLabel)
-    
-    local btnWidth = 40
-    local btnHeight = 2
-    local btnX = 6
-    
-    local checkBalanceBtn = sgl.Button:new(btnX, 6, btnWidth, btnHeight, "Check Balance")
-    checkBalanceBtn.onClick = function()
-        screens.checkBalance()
-    end
-    menuPanel:addChild(checkBalanceBtn)
-    
-    local withdrawBtn = sgl.Button:new(btnX, 9, btnWidth, btnHeight, "Withdraw")
-    withdrawBtn.onClick = function()
-        screens.withdraw()
-    end
-    menuPanel:addChild(withdrawBtn)
-    
-    local depositBtn = sgl.Button:new(btnX, 12, btnWidth, btnHeight, "Deposit")
-    depositBtn.onClick = function()
-        screens.deposit()
-    end
-    menuPanel:addChild(depositBtn)
-    
-    local transferBtn = sgl.Button:new(btnX, 15, btnWidth, btnHeight, "Transfer")
-    transferBtn.onClick = function()
-        screens.transfer()
-    end
-    menuPanel:addChild(transferBtn)
-    
-    local logoutBtn = sgl.Button:new(2, 18, 15, 1, "Logout")
-    logoutBtn.style.bgColor = colors.red
-    logoutBtn.onClick = function()
-        sessionToken = nil
-        accountNumber = nil
-        username = nil
-        balance = 0
-        currentScreen = "welcome"
-        screens.welcome()
-    end
-    menuPanel:addChild(logoutBtn)
-    
-    app:setRoot(menuPanel)
+local btnWidth = 38
+local btnHeight = 2
+local btnX = 5
+
+local checkBalanceBtn = sgl.Button:new(btnX, 5, btnWidth, btnHeight, "Check Balance")
+checkBalanceBtn.onClick = function()
+    showScreen("checkBalance")
 end
+menuScreen:addChild(checkBalanceBtn)
+
+local withdrawBtn = sgl.Button:new(btnX, 8, btnWidth, btnHeight, "Withdraw")
+withdrawBtn.onClick = function()
+    withdrawAmountInput:setText("")
+    withdrawStatusLabel:setText("")
+    showScreen("withdraw")
+end
+menuScreen:addChild(withdrawBtn)
+
+local depositBtn = sgl.Button:new(btnX, 11, btnWidth, btnHeight, "Deposit")
+depositBtn.onClick = function()
+    depositAmountInput:setText("")
+    depositStatusLabel:setText("")
+    showScreen("deposit")
+end
+menuScreen:addChild(depositBtn)
+
+local transferBtn = sgl.Button:new(btnX, 14, btnWidth, btnHeight, "Transfer")
+transferBtn.onClick = function()
+    transferAccountInput:setText("")
+    transferAmountInput:setText("")
+    transferStatusLabel:setText("")
+    showScreen("transfer")
+end
+menuScreen:addChild(transferBtn)
+
+local logoutBtn = sgl.Button:new(2, 17, 15, 1, "Logout")
+logoutBtn.style.bgColor = colors.red
+logoutBtn.onClick = function()
+    sessionToken = nil
+    accountNumber = nil
+    username = nil
+    balance = 0
+    usernameInput:setText("")
+    passwordInput:setText("")
+    loginStatusLabel:setText("")
+    currentScreen = "welcome"
+    showScreen("welcome")
+end
+menuScreen:addChild(logoutBtn)
 
 -- Check balance screen
-function screens.checkBalance()
-    local balancePanel = sgl.Panel:new(1, 1, 51, 19)
-    balancePanel:setTitle("Balance Check")
-    
-    local titleLabel = sgl.Label:new(2, 2, "Current Balance")
-    titleLabel.style.fgColor = colors.yellow
-    balancePanel:addChild(titleLabel)
-    
+local checkBalanceScreen = sgl.Panel:new(2, 2, 47, 15)
+checkBalanceScreen:setBorder(false)
+checkBalanceScreen:setVisible(false)
+checkBalanceScreen.data = {isScreen = true, screenName = "checkBalance"}
+root:addChild(checkBalanceScreen)
+
+local balanceTitleLabel = sgl.Label:new(2, 1, "Current Balance")
+balanceTitleLabel.style.fgColor = colors.yellow
+checkBalanceScreen:addChild(balanceTitleLabel)
+
+local balanceDisplayLabel = sgl.Label:new(2, 4, "")
+balanceDisplayLabel.style.fgColor = colors.green
+checkBalanceScreen:addChild(balanceDisplayLabel)
+
+local accountDisplayLabel = sgl.Label:new(2, 7, "")
+checkBalanceScreen:addChild(accountDisplayLabel)
+
+local balanceBackBtn = sgl.Button:new(12, 11, 20, 3, "Back to Menu")
+balanceBackBtn.onClick = function()
     -- Fetch latest balance
     local response, err = sendToServer(network.MSG.BALANCE_CHECK, {}, true)
     
     if response then
         balance = response.balance
-        
-        local balanceLabel = sgl.Label:new(2, 5, tostring(balance) .. " " .. config.currency.displayNamePlural)
-        balanceLabel.style.fgColor = colors.green
-        local termW = term.getSize()
-        balanceLabel.style.fontSize = 2  -- Larger text if supported
-        balancePanel:addChild(balanceLabel)
-        
-        local accountLabel = sgl.Label:new(2, 8, "Account: " .. accountNumber)
-        balancePanel:addChild(accountLabel)
+        balanceDisplayLabel:setText(tostring(balance) .. " " .. config.currency.displayNamePlural)
+        balanceDisplayLabel.style.fgColor = colors.green
+        accountDisplayLabel:setText("Account: " .. accountNumber)
+        accountDisplayLabel.style.fgColor = colors.white
     else
-        local errorLabel = sgl.Label:new(2, 5, "Error: " .. tostring(err))
-        errorLabel.style.fgColor = colors.red
-        balancePanel:addChild(errorLabel)
+        balanceDisplayLabel:setText("Error: " .. tostring(err))
+        balanceDisplayLabel.style.fgColor = colors.red
+        accountDisplayLabel:setText("")
     end
-    
-    local backBtn = sgl.Button:new(15, 15, 20, 3, "Back to Menu")
-    backBtn.onClick = function()
-        screens.menu()
-    end
-    balancePanel:addChild(backBtn)
-    
-    app:setRoot(balancePanel)
+    root:markDirty()
+    sleep(2)
+    showScreen("menu")
 end
+checkBalanceScreen:addChild(balanceBackBtn)
 
 -- Withdraw screen
-function screens.withdraw()
-    local withdrawPanel = sgl.Panel:new(1, 1, 51, 19)
-    withdrawPanel:setTitle("Withdraw")
+local withdrawScreen = sgl.Panel:new(2, 2, 47, 15)
+withdrawScreen:setBorder(false)
+withdrawScreen:setVisible(false)
+withdrawScreen.data = {isScreen = true, screenName = "withdraw"}
+root:addChild(withdrawScreen)
+
+local withdrawTitleLabel = sgl.Label:new(2, 1, "Withdrawal")
+withdrawTitleLabel.style.fgColor = colors.yellow
+withdrawScreen:addChild(withdrawTitleLabel)
+
+local withdrawBalanceLabel = sgl.Label:new(2, 3, "")
+withdrawScreen:addChild(withdrawBalanceLabel)
+
+local withdrawAmountLabel = sgl.Label:new(2, 5, "Amount to withdraw:")
+withdrawScreen:addChild(withdrawAmountLabel)
+
+local withdrawAmountInput = sgl.Input:new(2, 6, 43)
+withdrawScreen:addChild(withdrawAmountInput)
+
+local withdrawStatusLabel = sgl.Label:new(2, 13, "")
+withdrawScreen:addChild(withdrawStatusLabel)
+
+local withdrawBtn = sgl.Button:new(8, 9, 30, 3, "Withdraw")
+withdrawBtn.style.bgColor = colors.orange
+withdrawBtn.onClick = function()
+    local amount = tonumber(withdrawAmountInput:getText())
     
-    local titleLabel = sgl.Label:new(2, 2, "Withdrawal")
-    titleLabel.style.fgColor = colors.yellow
-    withdrawPanel:addChild(titleLabel)
-    
-    local balanceLabel = sgl.Label:new(2, 4, "Available: " .. balance .. " " .. config.currency.displayNamePlural)
-    withdrawPanel:addChild(balanceLabel)
-    
-    local amountLabel = sgl.Label:new(2, 6, "Amount to withdraw:")
-    withdrawPanel:addChild(amountLabel)
-    
-    local amountInput = sgl.Input:new(2, 7, 45)
-    withdrawPanel:addChild(amountInput)
-    
-    local withdrawBtn = sgl.Button:new(10, 10, 30, 3, "Withdraw")
-    withdrawBtn.style.bgColor = colors.orange
-    withdrawBtn.onClick = function()
-        local amount = tonumber(amountInput:getText())
-        
-        if not amount or amount <= 0 then
-            showMessage("Invalid amount", true)
-            return
-        end
-        
-        if amount > balance then
-            showMessage("Insufficient funds", true)
-            return
-        end
-        
-        if amount > config.atm.maxWithdrawal then
-            showMessage("Exceeds withdrawal limit", true)
-            return
-        end
-        
-        showMessage("Processing...", false)
-        
-        local response, err = sendToServer(network.MSG.WITHDRAW, {
-            amount = amount,
-            atmID = atmID
-        }, true)
-        
-        if response then
-            balance = response.newBalance
-            showMessage("Withdrawal successful!", false)
-            
-            -- Wait for currency to be dispensed
-            sleep(2)
-            screens.menu()
-        else
-            showMessage("Withdrawal failed: " .. tostring(err), true)
-        end
-    end
-    withdrawPanel:addChild(withdrawBtn)
-    
-    local cancelBtn = sgl.Button:new(10, 14, 30, 2, "Cancel")
-    cancelBtn.onClick = function()
-        screens.menu()
-    end
-    withdrawPanel:addChild(cancelBtn)
-    
-    if statusMessage ~= "" then
-        local msgLabel = sgl.Label:new(2, 17, statusMessage)
-        msgLabel.style.fgColor = messageColor
-        withdrawPanel:addChild(msgLabel)
+    if not amount or amount <= 0 then
+        withdrawStatusLabel:setText("Invalid amount")
+        withdrawStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
     end
     
-    app:setRoot(withdrawPanel)
-    app:setFocus(amountInput)
+    if amount > balance then
+        withdrawStatusLabel:setText("Insufficient funds")
+        withdrawStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    if amount > config.atm.maxWithdrawal then
+        withdrawStatusLabel:setText("Exceeds withdrawal limit")
+        withdrawStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    withdrawStatusLabel:setText("Processing...")
+    withdrawStatusLabel.style.fgColor = colors.white
+    root:markDirty()
+    
+    local response, err = sendToServer(network.MSG.WITHDRAW, {
+        amount = amount,
+        atmID = atmID
+    }, true)
+    
+    if response then
+        balance = response.newBalance
+        withdrawStatusLabel:setText("Withdrawal successful!")
+        withdrawStatusLabel.style.fgColor = colors.green
+        balanceLabel:setText("Balance: " .. balance .. " " .. config.currency.displayNamePlural)
+        root:markDirty()
+        
+        -- Wait for currency to be dispensed
+        sleep(2)
+        showScreen("menu")
+    else
+        withdrawStatusLabel:setText("Withdrawal failed: " .. tostring(err))
+        withdrawStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+    end
 end
+withdrawScreen:addChild(withdrawBtn)
+
+local withdrawCancelBtn = sgl.Button:new(8, 13, 30, 2, "Cancel")
+withdrawCancelBtn.onClick = function()
+    showScreen("menu")
+end
+withdrawScreen:addChild(withdrawCancelBtn)
 
 -- Deposit screen
-function screens.deposit()
-    local depositPanel = sgl.Panel:new(1, 1, 51, 19)
-    depositPanel:setTitle("Deposit")
-    
-    local titleLabel = sgl.Label:new(2, 2, "Deposit")
-    titleLabel.style.fgColor = colors.yellow
-    depositPanel:addChild(titleLabel)
-    
-    local infoLabel = sgl.Label:new(2, 4, "Insert currency into deposit slot")
-    depositPanel:addChild(infoLabel)
-    
-    local amountLabel = sgl.Label:new(2, 7, "Amount to deposit:")
-    depositPanel:addChild(amountLabel)
-    
-    local amountInput = sgl.Input:new(2, 8, 45)
-    depositPanel:addChild(amountInput)
-    
-    local scanBtn = sgl.Button:new(5, 11, 20, 2, "Scan Currency")
-    scanBtn.onClick = function()
-        -- Scan inserted currency
-        showMessage("Scanning currency...", false)
-        -- Would verify currency here
-    end
-    depositPanel:addChild(scanBtn)
-    
-    local depositBtn = sgl.Button:new(27, 11, 20, 2, "Deposit")
-    depositBtn.style.bgColor = colors.green
-    depositBtn.onClick = function()
-        local amount = tonumber(amountInput:getText())
-        
-        if not amount or amount <= 0 then
-            showMessage("Invalid amount", true)
-            return
-        end
-        
-        if amount > config.atm.maxDeposit then
-            showMessage("Exceeds deposit limit", true)
-            return
-        end
-        
-        showMessage("Processing...", false)
-        
-        local response, err = sendToServer(network.MSG.DEPOSIT, {
-            amount = amount,
-            atmID = atmID
-        }, true)
-        
-        if response then
-            balance = response.newBalance
-            showMessage("Deposit successful!", false)
-            sleep(2)
-            screens.menu()
-        else
-            showMessage("Deposit failed: " .. tostring(err), true)
-        end
-    end
-    depositPanel:addChild(depositBtn)
-    
-    local cancelBtn = sgl.Button:new(10, 14, 30, 2, "Cancel")
-    cancelBtn.onClick = function()
-        screens.menu()
-    end
-    depositPanel:addChild(cancelBtn)
-    
-    if statusMessage ~= "" then
-        local msgLabel = sgl.Label:new(2, 17, statusMessage)
-        msgLabel.style.fgColor = messageColor
-        depositPanel:addChild(msgLabel)
-    end
-    
-    app:setRoot(depositPanel)
-    app:setFocus(amountInput)
+local depositScreen = sgl.Panel:new(2, 2, 47, 15)
+depositScreen:setBorder(false)
+depositScreen:setVisible(false)
+depositScreen.data = {isScreen = true, screenName = "deposit"}
+root:addChild(depositScreen)
+
+local depositTitleLabel = sgl.Label:new(2, 1, "Deposit")
+depositTitleLabel.style.fgColor = colors.yellow
+depositScreen:addChild(depositTitleLabel)
+
+local depositInfoLabel = sgl.Label:new(2, 3, "Insert currency into deposit slot")
+depositScreen:addChild(depositInfoLabel)
+
+local depositAmountLabel = sgl.Label:new(2, 6, "Amount to deposit:")
+depositScreen:addChild(depositAmountLabel)
+
+local depositAmountInput = sgl.Input:new(2, 7, 43)
+depositScreen:addChild(depositAmountInput)
+
+local depositStatusLabel = sgl.Label:new(2, 13, "")
+depositScreen:addChild(depositStatusLabel)
+
+local scanBtn = sgl.Button:new(5, 10, 18, 2, "Scan Currency")
+scanBtn.onClick = function()
+    depositStatusLabel:setText("Scanning currency...")
+    depositStatusLabel.style.fgColor = colors.white
+    root:markDirty()
+    -- Would verify currency here
 end
+depositScreen:addChild(scanBtn)
+
+local depositConfirmBtn = sgl.Button:new(25, 10, 18, 2, "Deposit")
+depositConfirmBtn.style.bgColor = colors.green
+depositConfirmBtn.onClick = function()
+    local amount = tonumber(depositAmountInput:getText())
+    
+    if not amount or amount <= 0 then
+        depositStatusLabel:setText("Invalid amount")
+        depositStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    if amount > config.atm.maxDeposit then
+        depositStatusLabel:setText("Exceeds deposit limit")
+        depositStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    depositStatusLabel:setText("Processing...")
+    depositStatusLabel.style.fgColor = colors.white
+    root:markDirty()
+    
+    local response, err = sendToServer(network.MSG.DEPOSIT, {
+        amount = amount,
+        atmID = atmID
+    }, true)
+    
+    if response then
+        balance = response.newBalance
+        depositStatusLabel:setText("Deposit successful!")
+        depositStatusLabel.style.fgColor = colors.green
+        balanceLabel:setText("Balance: " .. balance .. " " .. config.currency.displayNamePlural)
+        root:markDirty()
+        sleep(2)
+        showScreen("menu")
+    else
+        depositStatusLabel:setText("Deposit failed: " .. tostring(err))
+        depositStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+    end
+end
+depositScreen:addChild(depositConfirmBtn)
+
+local depositCancelBtn = sgl.Button:new(8, 13, 30, 2, "Cancel")
+depositCancelBtn.onClick = function()
+    showScreen("menu")
+end
+depositScreen:addChild(depositCancelBtn)
 
 -- Transfer screen
-function screens.transfer()
-    local transferPanel = sgl.Panel:new(1, 1, 51, 19)
-    transferPanel:setTitle("Transfer")
+local transferScreen = sgl.Panel:new(2, 2, 47, 15)
+transferScreen:setBorder(false)
+transferScreen:setVisible(false)
+transferScreen.data = {isScreen = true, screenName = "transfer"}
+root:addChild(transferScreen)
+
+local transferTitleLabel = sgl.Label:new(2, 1, "Transfer Funds")
+transferTitleLabel.style.fgColor = colors.yellow
+transferScreen:addChild(transferTitleLabel)
+
+local transferBalanceLabel = sgl.Label:new(2, 3, "")
+transferScreen:addChild(transferBalanceLabel)
+
+local transferAccountLabel = sgl.Label:new(2, 5, "To Account Number:")
+transferScreen:addChild(transferAccountLabel)
+
+local transferAccountInput = sgl.Input:new(2, 6, 43)
+transferScreen:addChild(transferAccountInput)
+
+local transferAmountLabel = sgl.Label:new(2, 8, "Amount:")
+transferScreen:addChild(transferAmountLabel)
+
+local transferAmountInput = sgl.Input:new(2, 9, 43)
+transferScreen:addChild(transferAmountInput)
+
+local transferStatusLabel = sgl.Label:new(2, 14, "")
+transferScreen:addChild(transferStatusLabel)
+
+local transferConfirmBtn = sgl.Button:new(8, 12, 30, 3, "Transfer")
+transferConfirmBtn.style.bgColor = colors.blue
+transferConfirmBtn.onClick = function()
+    local toAccount = transferAccountInput:getText()
+    local amount = tonumber(transferAmountInput:getText())
     
-    local titleLabel = sgl.Label:new(2, 2, "Transfer Funds")
-    titleLabel.style.fgColor = colors.yellow
-    transferPanel:addChild(titleLabel)
-    
-    local balanceLabel = sgl.Label:new(2, 4, "Available: " .. balance .. " " .. config.currency.displayNamePlural)
-    transferPanel:addChild(balanceLabel)
-    
-    local accountLabel = sgl.Label:new(2, 6, "To Account Number:")
-    transferPanel:addChild(accountLabel)
-    
-    local accountInput = sgl.Input:new(2, 7, 45)
-    transferPanel:addChild(accountInput)
-    
-    local amountLabel = sgl.Label:new(2, 9, "Amount:")
-    transferPanel:addChild(amountLabel)
-    
-    local amountInput = sgl.Input:new(2, 10, 45)
-    transferPanel:addChild(amountInput)
-    
-    local transferBtn = sgl.Button:new(10, 13, 30, 3, "Transfer")
-    transferBtn.style.bgColor = colors.blue
-    transferBtn.onClick = function()
-        local toAccount = accountInput:getText()
-        local amount = tonumber(amountInput:getText())
-        
-        if toAccount == "" then
-            showMessage("Enter account number", true)
-            return
-        end
-        
-        if not amount or amount <= 0 then
-            showMessage("Invalid amount", true)
-            return
-        end
-        
-        if amount > balance then
-            showMessage("Insufficient funds", true)
-            return
-        end
-        
-        if amount > config.atm.maxTransfer then
-            showMessage("Exceeds transfer limit", true)
-            return
-        end
-        
-        showMessage("Processing...", false)
-        
-        local response, err = sendToServer(network.MSG.TRANSFER, {
-            amount = amount,
-            toAccount = toAccount
-        }, true)
-        
-        if response then
-            balance = response.newBalance
-            showMessage("Transfer successful!", false)
-            sleep(2)
-            screens.menu()
-        else
-            showMessage("Transfer failed: " .. tostring(err), true)
-        end
+    if toAccount == "" then
+        transferStatusLabel:setText("Enter account number")
+        transferStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
     end
-    transferPanel:addChild(transferBtn)
     
-    local cancelBtn = sgl.Button:new(10, 17, 30, 2, "Cancel")
-    cancelBtn.onClick = function()
-        screens.menu()
+    if not amount or amount <= 0 then
+        transferStatusLabel:setText("Invalid amount")
+        transferStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
     end
-    transferPanel:addChild(cancelBtn)
     
-    app:setRoot(transferPanel)
-    app:setFocus(accountInput)
+    if amount > balance then
+        transferStatusLabel:setText("Insufficient funds")
+        transferStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    if amount > config.atm.maxTransfer then
+        transferStatusLabel:setText("Exceeds transfer limit")
+        transferStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    transferStatusLabel:setText("Processing...")
+    transferStatusLabel.style.fgColor = colors.white
+    root:markDirty()
+    
+    local response, err = sendToServer(network.MSG.TRANSFER, {
+        amount = amount,
+        toAccount = toAccount
+    }, true)
+    
+    if response then
+        balance = response.newBalance
+        transferStatusLabel:setText("Transfer successful!")
+        transferStatusLabel.style.fgColor = colors.green
+        balanceLabel:setText("Balance: " .. balance .. " " .. config.currency.displayNamePlural)
+        root:markDirty()
+        sleep(2)
+        showScreen("menu")
+    else
+        transferStatusLabel:setText("Transfer failed: " .. tostring(err))
+        transferStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+    end
 end
+transferScreen:addChild(transferConfirmBtn)
+
+local transferCancelBtn = sgl.Button:new(8, 16, 30, 2, "Cancel")
+transferCancelBtn.onClick = function()
+    showScreen("menu")
+end
+transferScreen:addChild(transferCancelBtn)
 
 -- Status ping timer
 local function startStatusPing()
@@ -574,8 +643,18 @@ local function main()
             startStatusPing()
         end,
         function()
+            -- Set root and run
+            app:setRoot(root)
+            app:setFocus(usernameInput)
+            
+            -- Update balance labels before showing screens
+            withdrawBalanceLabel:setText("Available: " .. balance .. " " .. config.currency.displayNamePlural)
+            transferBalanceLabel:setText("Available: " .. balance .. " " .. config.currency.displayNamePlural)
+            
+            -- Show initial screen
+            showScreen("welcome")
+            
             -- Start UI
-            screens.welcome()
             app:run()
         end
     )
