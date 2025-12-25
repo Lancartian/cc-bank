@@ -424,7 +424,6 @@ local authTitle = sgl.Label:new(10, 1, "Authorize ATM", 43)
 authTitle.style.fgColor = colors.yellow
 authorizeATMScreen:addChild(authTitle)
 
-local idLabel = sgl.Label:new(2, 3, "ATM ID:", 43)
 local idLabel = sgl.Label:new(2, 3, "ATM ID (1-16):", 43)
 authorizeATMScreen:addChild(idLabel)
 
