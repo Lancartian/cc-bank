@@ -286,7 +286,7 @@ mintBtn.onClick = function()
     currencyStatusLabel.style.fgColor = colors.white
     root:markDirty()
     
-    local result, err = sendToServer(network.MSG.MINT_CURRENCY, {
+    local result, err = sendToServer(network.MSG.CURRENCY_MINT, {
         autoSort = true
     })
     
