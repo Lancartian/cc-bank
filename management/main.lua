@@ -151,13 +151,25 @@ loginBtn.style.bgColor = colors.green
 loginBtn.onClick = function()
     local password = loginPasswordInput:getText()
     
+    if password == "" then
+        loginStatusLabel:setText("Please enter password")
+        loginStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    -- Reload config to ensure we have latest hash
+    config.load()
+    
     if crypto.verifyPassword(password, config.management.masterPasswordHash, config.management.masterPasswordSalt) then
         authenticated = true
+        loginPasswordInput:setText("")  -- Clear on success
+        loginStatusLabel:setText("")
         showScreen("main")
     else
         loginStatusLabel:setText("Invalid password")
         loginStatusLabel.style.fgColor = colors.red
-        loginPasswordInput:setText("")
+        loginPasswordInput:setText("")  -- Clear on failure
         root:markDirty()
     end
 end
