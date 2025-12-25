@@ -35,7 +35,96 @@ function currency.save()
     return false
 end
 
--- Mint new currency from items in mint chest
+-- Parse denomination from book display name
+local function parseDenomination(displayName)
+    if not displayName then return nil end
+    
+    -- Try to extract number from the beginning of the name
+    -- Matches: "1 Token", "5 Credits", "10 Credit", "100", etc.
+    local num = string.match(displayName, "^(%d+)")
+    if num then
+        return tonumber(num)
+    end
+    
+    return nil
+end
+
+-- Mint new currency from items in mint chest, automatically sorting by book names
+function currency.mintAndSort()
+    -- Get mintable items from network storage
+    local mintableItems, err = networkStorage.getMintableItems()
+    if not mintableItems then
+        return nil, err or "no_mint_chest"
+    end
+    
+    local mintedByDenom = {}  -- Track minted items by denomination
+    local totalAmount = 0
+    local processedCount = 0
+    
+    -- Process each item in mint chest
+    for _, item in ipairs(mintableItems) do
+        -- Parse denomination from display name
+        local denomination = parseDenomination(item.displayName)
+        
+        if denomination then
+            -- Use the NBT hash as unique currency ID
+            local nbtHash = item.nbt
+            local currencyID = config.currency.nbtPrefix .. nbtHash
+            
+            -- Register in database if not already registered
+            local itemValue = item.count * denomination
+            
+            if not currencyDB[currencyID] then
+                currencyDB[currencyID] = {
+                    id = currencyID,
+                    nbtHash = nbtHash,
+                    denomination = denomination,
+                    itemCount = item.count,
+                    value = itemValue,
+                    minted = os.epoch("utc"),
+                    valid = true
+                }
+                
+                -- Track for sorting
+                if not mintedByDenom[denomination] then
+                    mintedByDenom[denomination] = {}
+                end
+                
+                table.insert(mintedByDenom[denomination], {
+                    id = currencyID,
+                    value = itemValue,
+                    slot = item.slot,
+                    count = item.count
+                })
+                
+                totalAmount = totalAmount + itemValue
+                processedCount = processedCount + 1
+            end
+        end
+    end
+    
+    -- Now sort the items into denomination chests
+    local sortResults = {}
+    for denom, items in pairs(mintedByDenom) do
+        local moved, err = networkStorage.sortBillsToDenomChest(denom, items)
+        if moved then
+            sortResults[denom] = moved
+        else
+            sortResults[denom] = {error = err}
+        end
+    end
+    
+    currency.save()
+    
+    return {
+        totalAmount = totalAmount,
+        processedCount = processedCount,
+        mintedByDenom = mintedByDenom,
+        sortResults = sortResults
+    }, nil
+end
+
+-- Mint new currency from items in mint chest (legacy function)
 function currency.mint(amount, denomination)
     denomination = denomination or 1
     

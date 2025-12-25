@@ -270,21 +270,38 @@ local currencyTitle = sgl.Label:new(10, 1, "Currency Minting", 43)
 currencyTitle.style.fgColor = colors.yellow
 currencyScreen:addChild(currencyTitle)
 
-local currencyInfo = sgl.Label:new(2, 3, "Place items in mint chest", 43)
+local currencyInfo = sgl.Label:new(2, 3, "Name books with denomination", 43)
 currencyScreen:addChild(currencyInfo)
 
-local amountLabel = sgl.Label:new(2, 5, "Amount to mint:", 43)
-currencyScreen:addChild(amountLabel)
+local currencyInfo2 = sgl.Label:new(2, 4, "(e.g. '1 Token', '5 Credits')", 43)
+currencyScreen:addChild(currencyInfo2)
 
-local amountInput = sgl.Input:new(2, 6, 40, 1)
-amountInput:setText("100")
-currencyScreen:addChild(amountInput)
+local currencyStatusLabel = sgl.Label:new(2, 6, "", 43)
+currencyScreen:addChild(currencyStatusLabel)
 
-local mintBtn = sgl.Button:new(10, 8, 25, 2, "Mint Currency")
+local mintBtn = sgl.Button:new(8, 9, 30, 3, "Process Mint Chest")
 mintBtn.style.bgColor = colors.green
 mintBtn.onClick = function()
-    -- Minting logic would go here
-    print("Minting...")
+    currencyStatusLabel:setText("Processing...")
+    currencyStatusLabel.style.fgColor = colors.white
+    root:markDirty()
+    
+    local result, err = sendToServer(network.MSG.MINT_CURRENCY, {
+        autoSort = true
+    })
+    
+    if result then
+        local msg = "Minted " .. result.totalAmount .. " Credits"
+        if result.processedCount then
+            msg = msg .. " (" .. result.processedCount .. " books)"
+        end
+        currencyStatusLabel:setText(msg)
+        currencyStatusLabel.style.fgColor = colors.green
+    else
+        currencyStatusLabel:setText("Error: " .. tostring(err))
+        currencyStatusLabel.style.fgColor = colors.red
+    end
+    root:markDirty()
 end
 currencyScreen:addChild(mintBtn)
 

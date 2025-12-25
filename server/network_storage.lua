@@ -494,4 +494,48 @@ function networkStorage.getStatus()
     }
 end
 
+-- Sort bills from mint chest to denomination chests
+function networkStorage.sortBillsToDenomChest(denomination, items)
+    if not mintChest then
+        return nil, "Mint chest not configured"
+    end
+    
+    local targetChests = denominationChests[denomination]
+    if not targetChests or #targetChests == 0 then
+        return nil, "No chest found for denomination " .. denomination
+    end
+    
+    local mintPeripheral = mintChest.peripheral
+    local movedCount = 0
+    local totalValue = 0
+    
+    -- Move each item to denomination chest
+    for _, item in ipairs(items) do
+        -- Try each denomination chest until we find one with space
+        local moved = false
+        for _, targetChest in ipairs(targetChests) do
+            local targetPeripheral = targetChest.peripheral
+            
+            -- Try to push the item
+            local pushed = mintPeripheral.pushItems(targetChest.name, item.slot)
+            if pushed and pushed > 0 then
+                movedCount = movedCount + 1
+                totalValue = totalValue + item.value
+                moved = true
+                break
+            end
+        end
+        
+        if not moved then
+            -- Could not move this item (chests full?)
+            return nil, "Could not move all items - denomination chests may be full"
+        end
+    end
+    
+    return {
+        movedCount = movedCount,
+        totalValue = totalValue
+    }, nil
+end
+
 return networkStorage

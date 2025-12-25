@@ -360,6 +360,47 @@ handlers[network.MSG.CURRENCY_VERIFY] = function(message, sender)
     })
 end
 
+-- Currency minting with automatic sorting
+handlers[network.MSG.CURRENCY_MINT] = function(message, sender)
+    local autoSort = message.data.autoSort
+    
+    if autoSort then
+        -- Automatic minting: read book names and sort to denomination chests
+        local result, err = currency.mintAndSort()
+        if not result then
+            return network.errorResponse("mint_error", err or "Failed to mint currency")
+        end
+        
+        return network.successResponse({
+            totalAmount = result.totalValue,
+            processedCount = result.totalBooks,
+            denominationBreakdown = result.breakdown
+        })
+    else
+        -- Legacy manual minting (kept for compatibility)
+        local amount = message.data.amount
+        local denomination = message.data.denomination
+        
+        if not amount or not denomination then
+            return network.errorResponse("missing_fields", "Amount and denomination required")
+        end
+        
+        if amount <= 0 or denomination <= 0 then
+            return network.errorResponse("invalid_values", "Values must be positive")
+        end
+        
+        local success, err = currency.mint(amount, denomination)
+        if not success then
+            return network.errorResponse("mint_error", err)
+        end
+        
+        return network.successResponse({
+            totalAmount = amount * denomination,
+            processedCount = amount
+        })
+    end
+end
+
 -- Currency dispensing using peripheral network and void chests
 -- Process:
 -- 1. currency.prepareDispense() moves bills from denomination chests to OUTPUT chest
