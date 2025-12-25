@@ -61,6 +61,14 @@ local function showScreen(screenName)
             child:setVisible(child.data.screenName == screenName)
         end
     end
+    
+    -- Refresh data when showing certain screens
+    if screenName == "listATMs" and refreshATMList then
+        refreshATMList()
+    elseif screenName == "listAccounts" and refreshAccountList then
+        refreshAccountList()
+    end
+    
     root:markDirty()
 end
 
@@ -496,8 +504,8 @@ authBtn.onClick = function()
 end
 authorizeATMScreen:addChild(authBtn)
 
-local authBackBtn = sgl.Button:new(25, 12, 15, 2, "Back")
-authBackBtn.onClick = function()
+local authBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
+authorBackBtn.onClick = function()
     showScreen("atm")
 end
 authorizeATMScreen:addChild(authBackBtn)
@@ -513,16 +521,47 @@ local listATMTitle = sgl.Label:new(10, 1, "Authorized ATMs", 43)
 listATMTitle.style.fgColor = colors.yellow
 listATMsScreen:addChild(listATMTitle)
 
--- ATM list would be dynamically populated here
-local noATMLabel = sgl.Label:new(2, 3, "No ATMs authorized yet", 43)
-noATMLabel.style.fgColor = colors.gray
-listATMsScreen:addChild(noATMLabel)
+local atmListLabels = {}
+for i = 1, 10 do
+    local label = sgl.Label:new(2, 2 + i, "", 43)
+    label.style.fgColor = colors.white
+    listATMsScreen:addChild(label)
+    atmListLabels[i] = label
+end
 
-local listATMBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+-- Function to refresh ATM list
+local function refreshATMList()
+    local count = 0
+    for atmID, data in pairs(config.management.authorizedATMs) do
+        count = count + 1
+        if count <= 10 then
+            atmListLabels[count]:setText("ATM #" .. atmID .. " - Token: " .. data.token)
+        end
+    end
+    
+    if count == 0 then
+        atmListLabels[1]:setText("No ATMs authorized yet")
+        atmListLabels[1].style.fgColor = colors.gray
+    else
+        for i = count + 1, 10 do
+            atmListLabels[i]:setText("")
+        end
+    end
+    root:markDirty()
+end
+
+local listATMBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
 listATMBackBtn.onClick = function()
     showScreen("atm")
 end
 listATMsScreen:addChild(listATMBackBtn)
+
+local listATMRefreshBtn = sgl.Button:new(20, 14, 20, 1, "Refresh")
+listATMRefreshBtn.onClick = function()
+    config.load()
+    refreshATMList()
+end
+listATMsScreen:addChild(listATMRefreshBtn)
 
 -- Create Account screen
 local createAccountScreen = sgl.Panel:new(2, 2, 47, 15)
@@ -535,7 +574,68 @@ local createAccTitle = sgl.Label:new(10, 1, "Create New Account", 43)
 createAccTitle.style.fgColor = colors.yellow
 createAccountScreen:addChild(createAccTitle)
 
-local createAccBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+local usernameLabel = sgl.Label:new(2, 3, "Username:", 43)
+createAccountScreen:addChild(usernameLabel)
+
+local usernameInput = sgl.Input:new(2, 4, 40, 1)
+createAccountScreen:addChild(usernameInput)
+
+local passwordLabel = sgl.Label:new(2, 6, "Password:", 43)
+createAccountScreen:addChild(passwordLabel)
+
+local passwordInput = sgl.Input:new(2, 7, 40, 1)
+passwordInput:setMasked(true)
+createAccountScreen:addChild(passwordInput)
+
+local balanceLabel = sgl.Label:new(2, 9, "Initial Balance:", 43)
+createAccountScreen:addChild(balanceLabel)
+
+local balanceInput = sgl.Input:new(2, 10, 40, 1)
+balanceInput:setText("0")
+createAccountScreen:addChild(balanceInput)
+
+local createAccStatusLabel = sgl.Label:new(2, 12, "", 43)
+createAccountScreen:addChild(createAccStatusLabel)
+
+local createAccBtn = sgl.Button:new(10, 14, 25, 1, "Create Account")
+createAccBtn.style.bgColor = colors.green
+createAccBtn.onClick = function()
+    local user = usernameInput:getText()
+    local pass = passwordInput:getText()
+    local bal = tonumber(balanceInput:getText()) or 0
+    
+    if user == "" or pass == "" then
+        createAccStatusLabel:setText("Username and password required")
+        createAccStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    createAccStatusLabel:setText("Creating account...")
+    createAccStatusLabel.style.fgColor = colors.white
+    root:markDirty()
+    
+    local result, err = sendToServer(network.MSG.ACCOUNT_CREATE, {
+        username = user,
+        password = pass,
+        initialBalance = bal
+    })
+    
+    if result then
+        createAccStatusLabel:setText("Account created! #" .. tostring(result.accountNumber))
+        createAccStatusLabel.style.fgColor = colors.green
+        usernameInput:setText("")
+        passwordInput:setText("")
+        balanceInput:setText("0")
+    else
+        createAccStatusLabel:setText("Error: " .. tostring(err))
+        createAccStatusLabel.style.fgColor = colors.red
+    end
+    root:markDirty()
+end
+createAccountScreen:addChild(createAccBtn)
+
+local createAccBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
 createAccBackBtn.onClick = function()
     showScreen("accounts")
 end
@@ -552,11 +652,51 @@ local listAccTitle = sgl.Label:new(10, 1, "Account List", 43)
 listAccTitle.style.fgColor = colors.yellow
 listAccountsScreen:addChild(listAccTitle)
 
-local listAccBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+local accountListLabels = {}
+for i = 1, 10 do
+    local label = sgl.Label:new(2, 2 + i, "", 43)
+    label.style.fgColor = colors.white
+    listAccountsScreen:addChild(label)
+    accountListLabels[i] = label
+end
+
+-- Function to refresh account list
+local function refreshAccountList()
+    local result, err = sendToServer(network.MSG.ACCOUNT_LIST, {})
+    
+    if result and result.accounts then
+        for i = 1, 10 do
+            if result.accounts[i] then
+                local acc = result.accounts[i]
+                accountListLabels[i]:setText(acc.username .. " (#" .. acc.accountNumber .. ") - " .. acc.balance .. " Credits")
+                accountListLabels[i].style.fgColor = colors.white
+            else
+                accountListLabels[i]:setText("")
+            end
+        end
+        
+        if #result.accounts == 0 then
+            accountListLabels[1]:setText("No accounts found")
+            accountListLabels[1].style.fgColor = colors.gray
+        end
+    else
+        accountListLabels[1]:setText("Error loading accounts")
+        accountListLabels[1].style.fgColor = colors.red
+    end
+    root:markDirty()
+end
+
+local listAccBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
 listAccBackBtn.onClick = function()
     showScreen("accounts")
 end
 listAccountsScreen:addChild(listAccBackBtn)
+
+local listAccRefreshBtn = sgl.Button:new(20, 14, 20, 1, "Refresh")
+listAccRefreshBtn.onClick = function()
+    refreshAccountList()
+end
+listAccountsScreen:addChild(listAccRefreshBtn)
 
 -- Determine initial screen and focus
 if not config.management.masterPasswordHash then

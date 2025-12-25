@@ -237,6 +237,73 @@ handlers[network.MSG.AUTH_REQUEST] = function(message, sender)
     }, nil, encryptionKey)
 end
 
+-- Account creation (management only)
+handlers[network.MSG.ACCOUNT_CREATE] = function(message, sender)
+    -- Require management authentication
+    local mgmtSession, err = validateManagementSession(message.token)
+    if not mgmtSession then
+        return network.errorResponse("unauthorized", err or "Management authentication required")
+    end
+    
+    local username = message.data.username
+    local password = message.data.password
+    local initialBalance = message.data.initialBalance or 0
+    
+    if not username or not password then
+        return network.errorResponse("missing_fields", "Username and password required")
+    end
+    
+    local accountNumber, err = accounts.create(username, password, initialBalance)
+    if not accountNumber then
+        return network.errorResponse("create_failed", err or "Failed to create account")
+    end
+    
+    print("Account created: " .. username .. " (#" .. accountNumber .. ")")
+    
+    return network.successResponse({
+        accountNumber = accountNumber,
+        username = username,
+        balance = initialBalance
+    })
+end
+
+-- Account list (management only)
+handlers[network.MSG.ACCOUNT_LIST] = function(message, sender)
+    -- Require management authentication
+    local mgmtSession, err = validateManagementSession(message.token)
+    if not mgmtSession then
+        return network.errorResponse("unauthorized", err or "Management authentication required")
+    end
+    
+    local accountList = accounts.list()
+    
+    return network.successResponse({
+        accounts = accountList,
+        count = #accountList
+    })
+end
+
+-- Balance check
+    
+    local accountNumber, err = accounts.authenticate(username, password)
+    if not accountNumber then
+        return network.errorResponse("auth_failed", err or "Authentication failed")
+    end
+    
+    local token = createSession(accountNumber)
+    local account = accounts.get(accountNumber)
+    
+    -- Send encrypted response
+    return network.createMessage(network.MSG.AUTH_RESPONSE, {
+        success = true,
+        token = token,
+        accountNumber = accountNumber,
+        username = account.username,
+        balance = account.balance,
+        encryptionKey = encryptionKey  -- Share encryption key for session
+    }, nil, encryptionKey)
+end
+
 -- Balance check
 handlers[network.MSG.BALANCE_CHECK] = function(message, sender)
     local session, err = validateSession(message.token)
