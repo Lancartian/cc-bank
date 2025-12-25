@@ -3,6 +3,7 @@
 
 local crypto = require("lib.crypto")
 local config = require("config")
+local networkStorage = require("server.network_storage")
 
 local currency = {}
 
@@ -34,53 +35,51 @@ function currency.save()
     return false
 end
 
--- Mint new currency
+-- Mint new currency from items in mint chest
 function currency.mint(amount, denomination)
     denomination = denomination or 1
     
-    -- Get chest peripheral
-    local chest = peripheral.wrap(config.server.mintChestSide)
-    if not chest then
-        return nil, "no_chest_found"
+    -- Get mintable items from network storage
+    local mintableItems, err = networkStorage.getMintableItems()
+    if not mintableItems then
+        return nil, err or "no_mint_chest"
     end
     
     local mintedItems = {}
     local totalAmount = 0
     
-    -- Find items in chest to mint
-    for slot, item in pairs(chest.list()) do
-        if item.name == config.currency.itemName and totalAmount < amount then
-            -- Get detailed item info including NBT
-            local details = chest.getItemDetail(slot)
+    -- Process each item in mint chest
+    for _, item in ipairs(mintableItems) do
+        if totalAmount >= amount then
+            break
+        end
+        
+        -- Use the NBT hash as unique currency ID
+        -- This hash represents the signed book's unique signature
+        local nbtHash = item.nbt  -- Already a hash string from CC:Tweaked
+        local currencyID = config.currency.nbtPrefix .. nbtHash
+        
+        -- Register in database if not already registered
+        local itemValue = item.count * denomination
+        
+        if not currencyDB[currencyID] then
+            currencyDB[currencyID] = {
+                id = currencyID,
+                nbtHash = nbtHash,
+                denomination = denomination,
+                itemCount = item.count,
+                value = itemValue,
+                minted = os.epoch("utc"),
+                valid = true
+            }
             
-            if details and details.nbt then
-                -- Hash the NBT to create unique ID
-                local nbtHash = details.nbt
-                local currencyID = config.currency.nbtPrefix .. nbtHash
-                
-                -- Register in database
-                local itemValue = item.count * denomination
-                
-                if not currencyDB[currencyID] then
-                    currencyDB[currencyID] = {
-                        id = currencyID,
-                        nbtHash = nbtHash,
-                        denomination = denomination,
-                        itemCount = item.count,
-                        value = itemValue,
-                        minted = os.epoch("utc"),
-                        valid = true
-                    }
-                    
-                    table.insert(mintedItems, {
-                        id = currencyID,
-                        value = itemValue,
-                        slot = slot
-                    })
-                    
-                    totalAmount = totalAmount + itemValue
-                end
-            end
+            table.insert(mintedItems, {
+                id = currencyID,
+                value = itemValue,
+                slot = item.slot
+            })
+            
+            totalAmount = totalAmount + itemValue
         end
     end
     
@@ -184,50 +183,65 @@ function currency.getTotalSupply()
 end
 
 -- Prepare currency for dispensing to ATM
+-- Selects appropriate denominations (bills) and moves them to output chest
 function currency.prepareDispense(amount, atmID)
-    -- This function identifies which currency to send to which ATM
-    -- The actual physical transfer is done by redstone-controlled void chests
+    -- This function calculates which bills are needed and moves them to output chest
+    -- The output chest items will then be transferred to the ATM's void chest
     
-    local chest = peripheral.wrap(config.server.mintChestSide)
-    if not chest then
-        return nil, "no_chest_found"
+    local selectedBills = {}
+    local selectedValue = 0
+    local remaining = amount
+    
+    -- Build sorted denomination list (prefer large bills if configured)
+    local denomList = {}
+    for _, denom in ipairs(config.currency.denominations) do
+        table.insert(denomList, denom.value)
     end
     
-    local selectedItems = {}
-    local selectedValue = 0
+    -- Sort by value (largest first if preferLargeBills, smallest first otherwise)
+    table.sort(denomList, function(a, b)
+        if config.currency.preferLargeBills then
+            return a > b
+        else
+            return a < b
+        end
+    end)
     
-    -- Find valid currency to dispense
-    for slot, item in pairs(chest.list()) do
-        if item.name == config.currency.itemName and selectedValue < amount then
-            local details = chest.getItemDetail(slot)
-            
-            if details and details.nbt then
-                local record, err = currency.verify(details.nbt)
-                
-                if record then
-                    local itemValue = math.min(item.count, math.ceil((amount - selectedValue) / record.denomination)) * record.denomination
-                    
-                    table.insert(selectedItems, {
-                        slot = slot,
-                        count = math.min(item.count, math.ceil(itemValue / record.denomination)),
-                        value = itemValue
-                    })
-                    
-                    selectedValue = selectedValue + itemValue
-                end
-            end
+    -- Calculate how many of each denomination we need
+    for _, denom in ipairs(denomList) do
+        if remaining <= 0 then break end
+        
+        local needed = math.floor(remaining / denom)
+        if needed > 0 then
+            table.insert(selectedBills, {
+                denomination = denom,
+                count = needed
+            })
+            selectedValue = selectedValue + (needed * denom)
+            remaining = remaining - (needed * denom)
         end
     end
     
     if selectedValue < amount then
-        return nil, "insufficient_currency"
+        return nil, "insufficient_currency_exact_change"
+    end
+    
+    -- Now transfer the bills to output chest using network storage
+    for _, bill in ipairs(selectedBills) do
+        local transferred, err = networkStorage.pullDenominationToOutput(bill.denomination, bill.count)
+        
+        if not transferred or transferred < bill.count then
+            return nil, "failed_to_transfer_denomination_" .. bill.denomination .. ": " .. (err or "unknown")
+        end
     end
     
     return {
         atmID = atmID,
         amount = selectedValue,
-        items = selectedItems
+        bills = selectedBills
     }, nil
 end
+
+return currency
 
 return currency
