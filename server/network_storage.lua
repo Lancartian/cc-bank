@@ -8,6 +8,8 @@ local networkStorage = {}
 -- Storage state
 local mintChest = nil
 local outputChest = nil
+local depositChests = {}  -- Indexed by ATM ID
+local collectionChest = nil
 local denominationChests = {}  -- Indexed by denomination value
 local voidChests = {}  -- Indexed by ATM ID
 local allChests = {}  -- All registered chests
@@ -15,6 +17,8 @@ local allChests = {}  -- All registered chests
 -- Marker names for special chests
 local MINT_MARKER = "MINT"
 local OUTPUT_MARKER = "OUTPUT"
+local DEPOSIT_MARKER = "DEPOSIT"
+local COLLECTION_MARKER = "COLLECTION"
 
 -- Get all peripheral names excluding directly attached ones
 -- If a chest is both directly attached AND on network, only return the network instance
@@ -184,6 +188,8 @@ function networkStorage.scanNetwork()
     -- Reset storage state
     mintChest = nil
     outputChest = nil
+    depositChests = {}
+    collectionChest = nil
     denominationChests = {}
     voidChests = {}
     allChests = {}
@@ -221,7 +227,43 @@ function networkStorage.scanNetwork()
                         name = peripheralName,
                         peripheral = chest,
                         markerSlot = markerSlot
+                   
+                
+                -- Check for COLLECTION marker
+                local isCollection, markerSlot = hasMarker(chest, COLLECTION_MARKER)
+                if isCollection then
+                    collectionChest = {
+                        name = peripheralName,
+                        peripheral = chest,
+                        markerSlot = markerSlot
                     }
+                    print("  Found COLLECTION chest: " .. peripheralName)
+                end
+                
+                -- Check for DEPOSIT marker (ATM-specific, e.g., "DEPOSIT 1", "DEPOSIT 2")
+                local items = chest.list()
+                for slot, item in pairs(items) do
+                    if string.find(item.name, "paper") then
+                        local detail = chest.getItemDetail(slot)
+                        if detail and detail.displayName then
+                            local displayUpper = string.upper(detail.displayName)
+                            if string.find(displayUpper, "DEPOSIT") then
+                                -- Try to extract ATM number
+                                local atmNum = tonumber(string.match(displayUpper, "DEPOSIT%s+(%d+)"))
+                                if atmNum then
+                                    depositChests[atmNum] = {
+                                        name = peripheralName,
+                                        peripheral = chest,
+                                        atmID = atmNum,
+                                        markerSlot = slot
+                                    }
+                                    print("  Found DEPOSIT chest for ATM #" .. atmNum .. ": " .. peripheralName)
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end }
                     print("  Found OUTPUT chest: " .. peripheralName)
                 end
                 
@@ -249,7 +291,17 @@ function networkStorage.scanNetwork()
                         peripheral = chest,
                         atmID = atmID,
                         markerSlot = markerSlot
-                    }
+   
+
+-- Get deposit chest for specific ATM ID
+function networkStorage.getDepositChest(atmID)
+    return depositChests[atmID]
+end
+
+-- Get collection chest
+function networkStorage.getCollectionChest()
+    return collectionChest
+end                 }
                     print("  Found ATM #" .. atmID .. " void chest: " .. peripheralName)
                 end
             end

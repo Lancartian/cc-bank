@@ -448,15 +448,61 @@ handlers[network.MSG.DEPOSIT] = function(message, sender)
         return network.errorResponse("session_error", err)
     end
     
-    local amount = message.data.amount
     local atmID = message.data.atmID
     
+    -- Get pending deposit from previous scan
+    if not session.pendingDeposit or not session.pendingDeposit[atmID] then
+        return network.errorResponse("no_scan", "Please scan currency first")
+    end
+    
+    local pendingDeposit = session.pendingDeposit[atmID]
+    
+    -- Check if scan is recent (within 5 minutes)
+    local now = os.epoch("utc")
+    if now - pendingDeposit.timestamp > 300000 then
+        session.pendingDeposit[atmID] = nil
+        return network.errorResponse("scan_expired", "Scan expired, please scan again")
+    end
+    
+    local amount = pendingDeposit.validAmount
+    
     if not amount or amount <= 0 then
-        return network.errorResponse("invalid_amount", "Amount must be positive")
+        return network.errorResponse("invalid_amount", "No valid currency to deposit")
     end
     
     -- Update account balance
     local success, err = accounts.updateBalance(session.accountNumber, amount)
+    if not success then
+        return network.errorResponse("balance_update_error", err)
+    end
+    
+    -- Move books from deposit chest to collection chest
+    local depositChest = networkStorage.getDepositChest(atmID)
+    local collectionChest = networkStorage.getCollectionChest()
+    
+    if depositChest and collectionChest then
+        local movedCount = 0
+        for _, book in ipairs(pendingDeposit.verifiedBooks) do
+            local moved = depositChest.peripheral.pushItems(collectionChest.name, book.slot)
+            if moved and moved > 0 then
+                movedCount = movedCount + 1
+            end
+        end
+        print("Deposit: Moved " .. movedCount .. "/" .. pendingDeposit.bookCount .. " books to collection")
+    end
+    
+    -- Clear pending deposit
+    session.pendingDeposit[atmID] = nil
+    
+    -- Log transaction
+    local txID = transactions.deposit(session.accountNumber, amount, atmID)
+    
+    return network.successResponse({
+        transactionID = txID,
+        amount = amount,
+        newBalance = accounts.getBalance(session.accountNumber)
+    })
+end
     if not success then
         return network.errorResponse("balance_update_error", err)
     end
@@ -622,22 +668,99 @@ end
 
 -- Currency verification
 handlers[network.MSG.CURRENCY_VERIFY] = function(message, sender)
-    local nbtHash = message.data.nbtHash
-    
-    if not nbtHash then
-        return network.errorResponse("missing_fields", "NBT hash required")
+    -- Check nonce
+    local nonceValid, nonceErr = checkNonce(message.nonce, message.timestamp)
+    if not nonceValid then
+        return network.errorResponse("replay_attack", nonceErr or "Replay attack detected")
     end
     
-    local record, err = currency.verify(nbtHash)
-    if not record then
-        return network.errorResponse("verification_failed", err)
+    local session, err = validateSession(message.token)
+    if not session then
+        return network.errorResponse("session_error", err)
     end
     
-    return network.successResponse({
-        valid = true,
-        value = record.value,
-        denomination = record.denomination
-    })
+    local atmID = message.data.atmID
+    local action = message.data.action
+    
+    if action == "scan_deposit" then
+        -- Scan deposit chest and verify all books
+        local depositChest = networkStorage.getDepositChest(atmID)
+        if not depositChest then
+            return network.errorResponse("no_deposit_chest", "Deposit chest not found for ATM #" .. atmID)
+        end
+        
+        local chest = depositChest.peripheral
+        local items = chest.list()
+        
+        local validAmount = 0
+        local bookCount = 0
+        local verifiedBooks = {}
+        
+        for slot, item in pairs(items) do
+            -- Only process books
+            if string.find(item.name, "written_book") then
+                local detail = chest.getItemDetail(slot)
+                if detail then
+                    -- Compute NBT hash
+                    local nbtData = {
+                        title = detail.displayName or "",
+                        author = detail.author or "",
+                        pages = detail.pages or {},
+                        generation = detail.generation or 0
+                    }
+                    local nbtString = textutils.serialiseJSON(nbtData)
+                    local nbtHash = crypto.sha256(nbtString)
+                    
+                    -- Verify against currency registry
+                    local record = currency.verify(nbtHash)
+                    if record then
+                        validAmount = validAmount + record.value
+                        bookCount = bookCount + 1
+                        table.insert(verifiedBooks, {
+                            slot = slot,
+                            hash = nbtHash,
+                            value = record.value,
+                            denomination = record.denomination
+                        })
+                    end
+                end
+            end
+        end
+        
+        -- Store verification results for this session
+        if not sessions[message.token].pendingDeposit then
+            sessions[message.token].pendingDeposit = {}
+        end
+        sessions[message.token].pendingDeposit[atmID] = {
+            validAmount = validAmount,
+            bookCount = bookCount,
+            verifiedBooks = verifiedBooks,
+            timestamp = os.epoch("utc")
+        }
+        
+        return network.successResponse({
+            validAmount = validAmount,
+            bookCount = bookCount
+        })
+    else
+        -- Single hash verification (legacy)
+        local nbtHash = message.data.nbtHash
+        
+        if not nbtHash then
+            return network.errorResponse("missing_fields", "NBT hash required")
+        end
+        
+        local record, err = currency.verify(nbtHash)
+        if not record then
+            return network.errorResponse("verification_failed", err)
+        end
+        
+        return network.successResponse({
+            valid = true,
+            value = record.value,
+            denomination = record.denomination
+        })
+    end
 end
 
 -- Currency minting with automatic sorting

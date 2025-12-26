@@ -516,56 +516,57 @@ depositScreen:setVisible(false)
 depositScreen.data = {isScreen = true, screenName = "deposit"}
 root:addChild(depositScreen)
 
-local depositTitleLabel = sgl.Label:new(2, 1, "Deposit", 43)
+local depositTitleLabel = sgl.Label:new(2, 1, "Deposit Currency", 43)
 depositTitleLabel.style.fgColor = colors.yellow
 depositScreen:addChild(depositTitleLabel)
 
-local depositInfoLabel = sgl.Label:new(2, 3, "Insert currency into deposit slot", 43)
+local depositInfoLabel = sgl.Label:new(2, 3, "Place signed books in deposit chest", 43)
 depositScreen:addChild(depositInfoLabel)
 
-local depositAmountLabel = sgl.Label:new(2, 6, "Amount to deposit:", 43)
-depositScreen:addChild(depositAmountLabel)
+local depositScannedLabel = sgl.Label:new(2, 5, "Scanned: 0 Credits", 43)
+depositScannedLabel.style.fgColor = colors.white
+depositScreen:addChild(depositScannedLabel)
 
-local depositAmountInput = sgl.Input:new(2, 7, 43, 1)
-depositScreen:addChild(depositAmountInput)
-
-local depositStatusLabel = sgl.Label:new(2, 13, "", 43)
+local depositStatusLabel = sgl.Label:new(2, 7, "", 43)
 depositScreen:addChild(depositStatusLabel)
 
-local scanBtn = sgl.Button:new(5, 10, 18, 2, "Scan Currency")
+local scanBtn = sgl.Button:new(3, 9, 20, 2, "Scan Currency")
 scanBtn.onClick = function()
-    depositStatusLabel:setText("Scanning currency...")
+    depositStatusLabel:setText("Scanning...")
     depositStatusLabel.style.fgColor = colors.white
+    depositScannedLabel:setText("Scanned: 0 Credits")
     root:markDirty()
-    -- Would verify currency here
+    
+    -- Request server to verify currency in deposit chest
+    local response, err = sendToServer(network.MSG.CURRENCY_VERIFY, {
+        atmID = atmID,
+        action = "scan_deposit"
+    }, true)
+    
+    if response and response.validAmount then
+        depositScannedLabel:setText("Scanned: " .. response.validAmount .. " Credits")
+        depositScannedLabel.style.fgColor = colors.green
+        depositStatusLabel:setText(response.bookCount .. " books verified")
+        depositStatusLabel.style.fgColor = colors.green
+    else
+        depositScannedLabel:setText("Scanned: 0 Credits")
+        depositScannedLabel.style.fgColor = colors.red
+        depositStatusLabel:setText("Error: " .. tostring(err))
+        depositStatusLabel.style.fgColor = colors.red
+    end
+    root:markDirty()
 end
 depositScreen:addChild(scanBtn)
 
-local depositConfirmBtn = sgl.Button:new(25, 10, 18, 2, "Deposit")
+local depositConfirmBtn = sgl.Button:new(25, 9, 20, 2, "Complete Deposit")
 depositConfirmBtn.style.bgColor = colors.green
 depositConfirmBtn.onClick = function()
-    local amount = tonumber(depositAmountInput:getText())
-    
-    if not amount or amount <= 0 then
-        depositStatusLabel:setText("Invalid amount")
-        depositStatusLabel.style.fgColor = colors.red
-        root:markDirty()
-        return
-    end
-    
-    if amount > config.atm.maxDeposit then
-        depositStatusLabel:setText("Exceeds deposit limit")
-        depositStatusLabel.style.fgColor = colors.red
-        root:markDirty()
-        return
-    end
-    
     depositStatusLabel:setText("Processing...")
     depositStatusLabel.style.fgColor = colors.white
     root:markDirty()
     
+    -- Complete the deposit
     local response, err = sendToServer(network.MSG.DEPOSIT, {
-        amount = amount,
         atmID = atmID
     }, true)
     
@@ -573,6 +574,7 @@ depositConfirmBtn.onClick = function()
         balance = response.newBalance
         depositStatusLabel:setText("Deposit successful!")
         depositStatusLabel.style.fgColor = colors.green
+        depositScannedLabel:setText("Scanned: 0 Credits")
         updateMenuLabels()
         root:markDirty()
         sleep(2)
@@ -585,7 +587,7 @@ depositConfirmBtn.onClick = function()
 end
 depositScreen:addChild(depositConfirmBtn)
 
-local depositCancelBtn = sgl.Button:new(8, 13, 30, 2, "Cancel")
+local depositCancelBtn = sgl.Button:new(8, 12, 30, 2, "Cancel")
 depositCancelBtn.onClick = function()
     showScreen("menu")
 end
