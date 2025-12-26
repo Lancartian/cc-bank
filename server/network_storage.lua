@@ -307,6 +307,9 @@ function networkStorage.getDenominationChest(value)
     if chests and #chests > 0 then
         return chests[1]
     end
+    return nil
+end
+
 -- Get auxiliary chest
 function networkStorage.getAuxiliaryChest()
     return auxiliaryChest
