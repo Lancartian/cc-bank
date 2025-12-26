@@ -82,13 +82,13 @@ local function showLogin()
     local usernameLabel = sgl.Label:new(2, 4, w - 2, "Username:")
     root:addChild(usernameLabel)
     
-    local usernameInput = sgl.TextInput:new(2, 5, w - 2, 1, "")
+    local usernameInput = sgl.Input:new(2, 5, w - 2, "")
     root:addChild(usernameInput)
     
     local passwordLabel = sgl.Label:new(2, 7, w - 2, "Password:")
     root:addChild(passwordLabel)
     
-    local passwordInput = sgl.TextInput:new(2, 8, w - 2, 1, "")
+    local passwordInput = sgl.Input:new(2, 8, w - 2, "")
     passwordInput.masked = true
     root:addChild(passwordInput)
     
@@ -245,7 +245,7 @@ local function showPurchase(item)
     local qtyLabel = sgl.Label:new(2, 6, w - 2, "Quantity:")
     root:addChild(qtyLabel)
     
-    local qtyInput = sgl.TextInput:new(2, 7, w - 2, 1, "1")
+    local qtyInput = sgl.Input:new(2, 7, w - 2, "1")
     root:addChild(qtyInput)
     
     local buyBtn = sgl.Button:new(2, 9, w - 2, 1, "Buy")
@@ -291,13 +291,13 @@ local function showTransfer()
     local toLabel = sgl.Label:new(2, 3, w - 2, "To:")
     root:addChild(toLabel)
     
-    local toInput = sgl.TextInput:new(2, 4, w - 2, 1, "")
+    local toInput = sgl.Input:new(2, 4, w - 2, "")
     root:addChild(toInput)
     
     local amountLabel = sgl.Label:new(2, 6, w - 2, "Amount:")
     root:addChild(amountLabel)
     
-    local amountInput = sgl.TextInput:new(2, 7, w - 2, 1, "")
+    local amountInput = sgl.Input:new(2, 7, w - 2, "")
     root:addChild(amountInput)
     
     local sendBtn = sgl.Button:new(2, 9, w - 2, 1, "Send")
