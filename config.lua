@@ -51,7 +51,13 @@ config.management = {
     requireATMAuth = true,  -- Require authorization for ATM registration
 }
 
--- ATM configuration
+-- Pocket computer configuration
+config.pocket = {
+    -- Network port
+    port = 42001,
+}
+
+-- ATM configuration (deprecated, kept for backwards compatibility)
 config.atm = {
     -- Network port
     port = 42001,

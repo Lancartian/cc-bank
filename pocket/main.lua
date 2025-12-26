@@ -328,7 +328,27 @@ end
 
 -- Get encryption key from server
 print("Connecting to server...")
+print("  Server port: " .. config.server.port)
+print("  Pocket port: " .. config.pocket.port)
+print("Sending PING...")
 local pingResponse, err = sendToServer(network.MSG.PING, {}, true)
+print("Response received: " .. tostring(pingResponse ~= nil))
+if err then
+    print("Error: " .. tostring(err))
+end
+if pingResponse then
+    print("Response type: " .. tostring(pingResponse.type))
+    if pingResponse.data then
+        print("Has data: true")
+        if pingResponse.data.encryptionKey then
+            print("Has encryptionKey: true")
+        else
+            print("Has encryptionKey: false")
+        end
+    else
+        print("Has data: false")
+    end
+end
 if pingResponse and pingResponse.type == network.MSG.PONG then
     encryptionKey = pingResponse.data.encryptionKey
     print("Connected!")
