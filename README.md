@@ -453,7 +453,8 @@ cc-bank/
 ## Credits
 
 - **CC-SGL**: Graphics library by Lancartian
-- **ComputerCraft: Tweaked**: Minecraft mod by SquidDev
+- **ComputerCraft**: Original Minecraft mod by dan200 (Daniel Ratcliffe)
+- **ComputerCraft: Tweaked**: Continuation/fork by SquidDev
 - **Create**: Minecraft mod by simibubi
 - **Create Utilities**: Addon by possible_triangle
 
