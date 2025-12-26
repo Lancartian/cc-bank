@@ -515,6 +515,87 @@ handlers[network.MSG.SHOP_PURCHASE] = function(message, sender)
     })
 end
 
+-- Shop Management (Admin only)
+handlers[network.MSG.SHOP_MANAGE] = function(message, sender)
+    -- Validate management session
+    local session, err = validateManagementSession(message.token)
+    if not session then
+        return network.errorResponse("session_error", err or "Invalid management session")
+    end
+    
+    local action = message.data.action
+    
+    if action == "add" then
+        local itemName = message.data.itemName
+        local price = message.data.price
+        local category = message.data.category or "General"
+        local description = message.data.description or ""
+        
+        if not itemName or not price then
+            return network.errorResponse("missing_fields", "Item name and price required")
+        end
+        
+        if price <= 0 then
+            return network.errorResponse("invalid_price", "Price must be positive")
+        end
+        
+        catalog.setItem(itemName, price, category, description)
+        catalog.save()
+        
+        return network.successResponse({
+            message = "Item added to catalog",
+            itemName = itemName,
+            price = price
+        })
+        
+    elseif action == "remove" then
+        local itemName = message.data.itemName
+        
+        if not itemName then
+            return network.errorResponse("missing_fields", "Item name required")
+        end
+        
+        catalog.removeItem(itemName)
+        catalog.save()
+        
+        return network.successResponse({
+            message = "Item removed from catalog",
+            itemName = itemName
+        })
+        
+    elseif action == "update" then
+        local itemName = message.data.itemName
+        local price = message.data.price
+        local category = message.data.category
+        local description = message.data.description
+        
+        if not itemName then
+            return network.errorResponse("missing_fields", "Item name required")
+        end
+        
+        local existing = catalog.getItem(itemName)
+        if not existing then
+            return network.errorResponse("item_not_found", "Item not in catalog")
+        end
+        
+        -- Use existing values if not provided
+        price = price or existing.price
+        category = category or existing.category
+        description = description or existing.description
+        
+        catalog.setItem(itemName, price, category, description)
+        catalog.save()
+        
+        return network.successResponse({
+            message = "Item updated",
+            itemName = itemName,
+            price = price
+        })
+    else
+        return network.errorResponse("invalid_action", "Unknown action: " .. tostring(action))
+    end
+end
+
 -- Transfer
 handlers[network.MSG.TRANSFER] = function(message, sender)
     -- Check nonce
