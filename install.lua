@@ -246,33 +246,35 @@ if not fs.exists(sglPath) then
     print("")
     
     -- Download SGL installer
-    if fs.exists("sgl_installer.lua") then
-        fs.delete("sgl_installer.lua")
+    if fs.exists("installer.lua") then
+        fs.delete("installer.lua")
     end
     
     print("Downloading SGL installer...")
-    local success = shell.run("wget", "https://raw.githubusercontent.com/Lancartian/cc-sgl/main/installer.lua", "sgl_installer.lua")
+    local success = shell.run("wget", "https://raw.githubusercontent.com/Lancartian/cc-sgl/main/installer.lua")
     
-    if not success or not fs.exists("sgl_installer.lua") then
+    if not success or not fs.exists("installer.lua") then
         print("ERROR: Failed to download SGL installer!")
         print("Please install CC-SGL manually first:")
-        print("  pastebin run wHDNcd6j")
+        print("  wget https://raw.githubusercontent.com/Lancartian/cc-sgl/main/installer.lua")
+        print("  installer")
         return
     end
     
     print("Running SGL installer...")
-    shell.run("sgl_installer.lua")
+    shell.run("installer")
     
     -- Clean up installer
-    if fs.exists("sgl_installer.lua") then
-        fs.delete("sgl_installer.lua")
+    if fs.exists("installer.lua") then
+        fs.delete("installer.lua")
     end
     
     -- Verify SGL was installed
     if not fs.exists(sglPath) then
         print("ERROR: SGL installation failed!")
         print("Please install CC-SGL manually:")
-        print("  pastebin run wHDNcd6j")
+        print("  wget https://raw.githubusercontent.com/Lancartian/cc-sgl/main/installer.lua")
+        print("  installer")
         return
     end
     
