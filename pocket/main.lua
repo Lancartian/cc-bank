@@ -29,8 +29,13 @@ end
 -- Screen dimensions for pocket computer
 local w, h = term.getSize()
 
+-- Create application
+local app = sgl.createApplication("CC-Bank")
+
 -- Create UI root
-local root = sgl.Group:new(1, 1, w, h)
+local root = sgl.Panel:new(1, 1, w, h)
+root:setBorder(false)
+app:setRoot(root)
 
 -- Utility functions
 local function sendToServer(msgType, data, waitForResponse)
@@ -334,9 +339,5 @@ end
 -- Start with login screen
 showLogin()
 
--- Main loop
-while true do
-    root:draw()
-    local event = {os.pullEvent()}
-    root:handleEvent(event)
-end
+-- Run the application
+app:run()

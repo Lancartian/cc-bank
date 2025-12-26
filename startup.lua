@@ -14,9 +14,9 @@ local function detectComponent()
         return "management"
     end
     
-    -- Check for ATM-specific files
-    if fs.exists("/atm/main.lua") then
-        return "atm"
+    -- Check for pocket-specific files
+    if fs.exists("/pocket/main.lua") then
+        return "pocket"
     end
     
     return nil
@@ -46,9 +46,9 @@ if component == "server" then
 elseif component == "management" then
     print("Starting Management Console...")
     shell.run("/management/main.lua")
-elseif component == "atm" then
-    print("Starting ATM...")
-    shell.run("/atm/main.lua")
+elseif component == "pocket" then
+    print("Starting Pocket Computer App...")
+    shell.run("/pocket/main.lua")
 end
 
 -- If the program exits, restart after a delay
