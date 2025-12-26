@@ -257,12 +257,12 @@ if not fs.exists(sglPath) then
         print("ERROR: Failed to download SGL installer!")
         print("Please install CC-SGL manually first:")
         print("  wget https://raw.githubusercontent.com/Lancartian/cc-sgl/main/installer.lua")
-        print("  installer")
+        print("  installer install")
         return
     end
     
     print("Running SGL installer...")
-    shell.run("installer")
+    shell.run("installer", "install")
     
     -- Clean up installer
     if fs.exists("installer.lua") then
@@ -274,7 +274,7 @@ if not fs.exists(sglPath) then
         print("ERROR: SGL installation failed!")
         print("Please install CC-SGL manually:")
         print("  wget https://raw.githubusercontent.com/Lancartian/cc-sgl/main/installer.lua")
-        print("  installer")
+        print("  installer install")
         return
     end
     
