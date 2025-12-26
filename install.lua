@@ -147,25 +147,11 @@ local function restoreData()
     return true
 end
 
--- Check if SGL is installed
-print("Checking for CC-SGL...")
-if not fs.exists("lib/sgl/sgl.lua") and not fs.exists("/lib/sgl/sgl.lua") then
-    print("CC-SGL not found! Installing...")
-    print("")
-    
-    shell.run("wget", "https://raw.githubusercontent.com/Lancartian/cc-sgl/main/installer.lua", "sgl_installer.lua")
-    shell.run("sgl_installer.lua", "install")
-    
-    if fs.exists("sgl_installer.lua") then
-        fs.delete("sgl_installer.lua")
-    end
-    print("")
-else
-    print("CC-SGL already installed.")
-    print("")
-end
+print("CC-Bank Digital Banking Installer v2.0")
+print("=======================================")
+print("")
 
--- Ask which component to install (if not specified as argument)
+-- Check if updating existing installation
 if component == nil then
     print("Which component do you want to install?")
     print("1. All components (recommended for first install)")
@@ -251,6 +237,25 @@ for _, dir in ipairs(dirs) do
 end
 
 print("")
+
+-- Install SGL (after cleanup and directory creation)
+print("Checking for CC-SGL...")
+if not fs.exists("lib/sgl/sgl.lua") and not fs.exists("/lib/sgl/sgl.lua") then
+    print("CC-SGL not found! Installing...")
+    print("")
+    
+    shell.run("wget", "https://raw.githubusercontent.com/Lancartian/cc-sgl/main/installer.lua", "sgl_installer.lua")
+    shell.run("sgl_installer.lua", "install")
+    
+    if fs.exists("sgl_installer.lua") then
+        fs.delete("sgl_installer.lua")
+    end
+    print("")
+else
+    print("CC-SGL already installed.")
+    print("")
+end
+
 print("Downloading files...")
 print("")
 
