@@ -5,7 +5,6 @@ local config = require("/config")
 local network = require("/lib/network")
 local crypto = require("/lib/crypto")
 local accounts = require("/server/accounts")
-local currency = require("/server/currency")
 local transactions = require("/server/transactions")
 local networkStorage = require("/server/network_storage")
 
@@ -102,14 +101,10 @@ print("Listening on port: " .. config.server.port)
 -- Load data
 print("\nLoading data...")
 accounts.load()
-currency.load()
 transactions.load()
 
 print("Accounts loaded: " .. #accounts.list())
 print("Transactions loaded: " .. transactions.getStats().totalTransactions)
-
-local supply = currency.getTotalSupply()
-print("Currency supply: " .. supply.totalValue .. " " .. config.currency.displayNamePlural)
 
 -- Session management functions
 local function createSession(accountNumber)
