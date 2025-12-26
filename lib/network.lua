@@ -8,8 +8,9 @@ local network = {}
 -- Protocol constants
 network.PROTOCOL = "CCBANK_v1"
 network.PORT_SERVER = 42000
-network.PORT_ATM = 42001
+network.PORT_POCKET = 42001
 network.PORT_MANAGEMENT = 42002
+network.PORT_SHOP = 42003
 
 -- Message types
 network.MSG = {
@@ -26,14 +27,12 @@ network.MSG = {
     
     -- Transactions
     BALANCE_CHECK = "BAL_CHECK",
-    WITHDRAW = "WITHDRAW",
-    DEPOSIT = "DEPOSIT",
     TRANSFER = "TRANSFER",
     
-    -- Currency
-    CURRENCY_MINT = "CURR_MINT",
-    CURRENCY_VERIFY = "CURR_VERIFY",
-    CURRENCY_DISPENSE = "CURR_DISPENSE",
+    -- Shop operations
+    SHOP_BROWSE = "SHOP_BROWSE",
+    SHOP_PURCHASE = "SHOP_PURCHASE",
+    SHOP_STATUS = "SHOP_STATUS",
     
     -- System
     PING = "PING",
@@ -41,13 +40,9 @@ network.MSG = {
     ERROR = "ERROR",
     SUCCESS = "SUCCESS",
     
-    -- ATM specific
-    ATM_REGISTER = "ATM_REG",
-    ATM_STATUS = "ATM_STATUS",
-    
     -- Management console
     MGMT_LOGIN = "MGMT_LOGIN",
-    ATM_AUTHORIZE = "ATM_AUTHORIZE"
+    SHOP_MANAGE = "SHOP_MANAGE"
 }
 
 -- Open modem on specified port

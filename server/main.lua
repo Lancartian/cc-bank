@@ -85,11 +85,9 @@ local encryptionKey = config.security.encryptionKey
 
 -- Session management
 local sessions = {}  -- token -> session data
-local atmRegistry = {}  -- atmID -> {lastPing, online, authorized, computerID}
 local messageNonces = {}  -- Track nonces to prevent replay attacks
 local managementSessions = {}  -- token -> {created, lastActivity, computerID}
 local loginAttempts = {}  -- Track login attempts by sender for rate limiting
-local depositRegistry = {}  -- nbtHash -> {username, accountNumber, timestamp}
 
 -- Initialize modem
 local modem = network.init(config.server.port)
