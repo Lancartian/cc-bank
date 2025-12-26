@@ -621,8 +621,20 @@ scanBtn.onClick = function()
     if response and response.validAmount then
         depositScannedLabel:setText("Scanned: " .. response.validAmount .. " Credits")
         depositScannedLabel.style.fgColor = colors.green
-        depositStatusLabel:setText(response.bookCount .. " books verified - put in void chest")
-        depositStatusLabel.style.fgColor = colors.green
+        
+        if response.bookCount > 0 then
+            depositStatusLabel:setText(response.bookCount .. " books verified - put in void chest")
+            depositStatusLabel.style.fgColor = colors.green
+        else
+            -- No valid books found
+            local msg = "0 valid books"
+            if response.invalidBooks and #response.invalidBooks > 0 then
+                local reason = response.invalidBooks[1].reason or "unknown"
+                msg = msg .. " (" .. reason .. ")"
+            end
+            depositStatusLabel:setText(msg)
+            depositStatusLabel.style.fgColor = colors.red
+        end
     else
         depositScannedLabel:setText("Scanned: 0 Credits")
         depositScannedLabel.style.fgColor = colors.red

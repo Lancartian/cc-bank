@@ -678,15 +678,20 @@ handlers[network.MSG.CURRENCY_VERIFY] = function(message, sender)
         
         local validAmount = 0
         local bookCount = 0
+        local invalidBooks = {}
         
         for _, book in ipairs(books) do
             -- Book contains the NBT hash directly from the ATM
             local nbtHash = book.nbtHash
             
             if nbtHash then
+                -- Debug: print hash for verification
+                print("[DEPOSIT] Verifying NBT hash: " .. tostring(nbtHash))
+                
                 -- Verify against currency registry
-                local record = currency.verify(nbtHash)
+                local record, err = currency.verify(nbtHash)
                 if record then
+                    print("[DEPOSIT] Valid book found: " .. record.value .. " credits")
                     validAmount = validAmount + record.value
                     bookCount = bookCount + 1
                     
@@ -698,13 +703,18 @@ handlers[network.MSG.CURRENCY_VERIFY] = function(message, sender)
                         value = record.value,
                         denomination = record.denomination
                     }
+                else
+                    print("[DEPOSIT] Invalid book: " .. tostring(err))
+                    table.insert(invalidBooks, {hash = nbtHash, reason = err})
                 end
             end
         end
         
         return network.successResponse({
             validAmount = validAmount,
-            bookCount = bookCount
+            bookCount = bookCount,
+            totalScanned = #books,
+            invalidBooks = invalidBooks
         })
     else
         -- Single hash verification (legacy)
