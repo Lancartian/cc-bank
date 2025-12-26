@@ -99,21 +99,25 @@ local function showLogin()
     
     local loginBtn = sgl.Button:new(2, 10, w - 2, 3, "Login")
     loginBtn.onClick = function()
-        local user = usernameInput.text
-        local pass = passwordInput.text
+        -- Debug: write to log file to confirm onClick is firing
+        local f = fs.open("/login_debug.txt", "a")
+        if f then
+            f.writeLine(os.epoch("utc") .. ": Login button clicked")
+            f.close()
+        end
         
-        statusLabel.text = ""
-        root:markDirty()
+        local user = usernameInput:getValue() or ""
+        local pass = passwordInput:getValue() or ""
+        
+        statusLabel:setText("")
         
         if user == "" or pass == "" then
-            statusLabel.text = "Enter username and password"
-            root:markDirty()
+            statusLabel:setText("Enter username and password")
             return
         end
         
-        statusLabel.text = "Authenticating..."
         statusLabel.style.fgColor = colors.yellow
-        root:markDirty()
+        statusLabel:setText("Authenticating...")
         
         local passwordHash = crypto.sha256(pass)
         local response, err = sendToServer(network.MSG.AUTH_REQUEST, {
@@ -132,20 +136,17 @@ local function showLogin()
                     accountNumber = authData.accountNumber
                     username = user
                     balance = authData.balance or 0
-                    statusLabel.text = "Success!"
                     statusLabel.style.fgColor = colors.green
-                    root:markDirty()
+                    statusLabel:setText("Success!")
                     sleep(0.5)
                     showMenu()
                 else
-                    statusLabel.text = "Authentication failed"
                     statusLabel.style.fgColor = colors.red
-                    root:markDirty()
+                    statusLabel:setText("Authentication failed")
                 end
             else
-                statusLabel.text = "Invalid response from server"
                 statusLabel.style.fgColor = colors.red
-                root:markDirty()
+                statusLabel:setText("Invalid response from server")
             end
         elseif response and response.type == network.MSG.ERROR then
             -- Handle error response from server
@@ -153,9 +154,8 @@ local function showLogin()
             if response.data and response.data.message then
                 errorMsg = response.data.message
             end
-            statusLabel.text = errorMsg
             statusLabel.style.fgColor = colors.red
-            root:markDirty()
+            statusLabel:setText(errorMsg)
         else
             -- Network or timeout error
             local errorMsg = "Connection failed"
@@ -164,9 +164,8 @@ local function showLogin()
             elseif err then
                 errorMsg = "Error: " .. err
             end
-            statusLabel.text = errorMsg
             statusLabel.style.fgColor = colors.red
-            root:markDirty()
+            statusLabel:setText(errorMsg)
         end
     end
     root:addChild(loginBtn)
