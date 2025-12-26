@@ -265,20 +265,12 @@ loginBtn.onClick = function()
         return
     end
     
-    -- Response may be encrypted - try to decrypt if encryption key available
+    -- Response may be encrypted - response.data contains the actual data
     local responseData = response.data
-    if response.data.isEncrypted and response.data.encrypted then
-        -- Try to decrypt with encryption key from registration
-        if encryptionKey then
-            local success, data = network.verifyMessage(response, encryptionKey, encryptionKey)
-            if success and data then
-                responseData = data
-            end
-        end
-    end
     
+    -- If responseData itself is nil, something went wrong
     if not responseData then
-        loginStatusLabel:setText("Failed to decrypt response")
+        loginStatusLabel:setText("Invalid response from server")
         loginStatusLabel.style.fgColor = colors.red
         passwordInput:setText("")
         root:markDirty()
@@ -289,7 +281,7 @@ loginBtn.onClick = function()
     sessionToken = responseData.token
     accountNumber = responseData.accountNumber
     username = responseData.username
-    balance = responseData.balance
+    balance = responseData.balance or 0
     
     -- Update encryption key if provided
     if responseData.encryptionKey then
