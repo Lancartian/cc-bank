@@ -558,20 +558,29 @@ local function scanLocalChest()
     local books = {}
     local items = scanChest.list()
     
+    if not items or type(items) ~= "table" then
+        return nil, "Could not read chest contents"
+    end
+    
+    local itemCount = 0
+    for _ in pairs(items) do itemCount = itemCount + 1 end
+    
+    if itemCount == 0 then
+        return books, nil  -- Empty chest, not an error
+    end
+    
     for slot, item in pairs(items) do
-        -- Check if it's a signed book
-        if string.find(item.name, "written_book") then
+        -- Check if it's a signed book (minecraft:written_book)
+        if item.name == "minecraft:written_book" or string.find(item.name, "written_book") then
             local detail = scanChest.getItemDetail(slot)
-            if detail and detail.nbt then
-                -- Extract NBT fields
-                local nbt = detail.nbt
-                table.insert(books, {
-                    title = nbt.title or "",
-                    author = nbt.author or "",
-                    pages = nbt.pages or {},
-                    generation = nbt.generation or 0,
-                    slot = slot
-                })
+            if detail then
+                -- Check if NBT data exists
+                -- In CC:Tweaked, detail.nbt is a hash string, not a table
+                if detail.nbt then
+                    table.insert(books, {
+                        nbtHash = detail.nbt  -- Send the hash directly
+                    })
+                end
             end
         end
     end

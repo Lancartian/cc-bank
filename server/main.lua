@@ -680,15 +680,13 @@ handlers[network.MSG.CURRENCY_VERIFY] = function(message, sender)
         local bookCount = 0
         
         for _, book in ipairs(books) do
-            -- Compute NBT hash from ATM-provided data
-            local nbtData = {
-                title = book.title or "",
-                author = book.author or "",
-                pages = book.pages or {},
-                generation = book.generation or 0
-            }
-            local nbtString = textutils.serialiseJSON(nbtData)
-            local nbtHash = crypto.sha256(nbtString)
+            -- Book contains the NBT hash directly from the ATM
+            local nbtHash = book.nbtHash
+            
+            if not nbtHash then
+                -- Skip books without hash
+                goto continue
+            end
             
             -- Verify against currency registry
             local record = currency.verify(nbtHash)
@@ -705,6 +703,8 @@ handlers[network.MSG.CURRENCY_VERIFY] = function(message, sender)
                     denomination = record.denomination
                 }
             end
+            
+            ::continue::
         end
         
         return network.successResponse({
