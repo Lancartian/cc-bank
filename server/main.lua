@@ -222,7 +222,8 @@ local handlers = {}
 handlers[network.MSG.PING] = function(message, sender)
     return network.createMessage(network.MSG.PONG, {
         serverID = os.getComputerID(),
-        timestamp = os.epoch("utc")
+        timestamp = os.epoch("utc"),
+        encryptionKey = encryptionKey
     })
 end
 
@@ -696,7 +697,8 @@ local function serverLoop()
                        message.type == network.MSG.SHOP_MANAGE then
                         responsePort = config.management.port
                     -- Pocket/Shop messages get responses on their respective ports  
-                    elseif message.type == network.MSG.AUTH_REQUEST or
+                    elseif message.type == network.MSG.PING or
+                           message.type == network.MSG.AUTH_REQUEST or
                            message.type == network.MSG.BALANCE_CHECK or
                            message.type == network.MSG.TRANSFER or
                            message.type == network.MSG.SHOP_BROWSE or
