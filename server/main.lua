@@ -683,28 +683,23 @@ handlers[network.MSG.CURRENCY_VERIFY] = function(message, sender)
             -- Book contains the NBT hash directly from the ATM
             local nbtHash = book.nbtHash
             
-            if not nbtHash then
-                -- Skip books without hash
-                goto continue
+            if nbtHash then
+                -- Verify against currency registry
+                local record = currency.verify(nbtHash)
+                if record then
+                    validAmount = validAmount + record.value
+                    bookCount = bookCount + 1
+                    
+                    -- Register this hash as belonging to this user
+                    depositRegistry[nbtHash] = {
+                        username = session.username,
+                        accountNumber = session.accountNumber,
+                        timestamp = os.epoch("utc"),
+                        value = record.value,
+                        denomination = record.denomination
+                    }
+                end
             end
-            
-            -- Verify against currency registry
-            local record = currency.verify(nbtHash)
-            if record then
-                validAmount = validAmount + record.value
-                bookCount = bookCount + 1
-                
-                -- Register this hash as belonging to this user
-                depositRegistry[nbtHash] = {
-                    username = session.username,
-                    accountNumber = session.accountNumber,
-                    timestamp = os.epoch("utc"),
-                    value = record.value,
-                    denomination = record.denomination
-                }
-            end
-            
-            ::continue::
         end
         
         return network.successResponse({
