@@ -73,13 +73,10 @@ if not networkStorage.scanNetwork() then
     print("Make sure chests are connected via wired modems")
 end
 
-local storageStatus = networkStorage.getStatus()
+local storageStatus = networkStorage.getChestInfo()
 print("\nNetwork Storage Status:")
-print("  MINT chest: " .. (storageStatus.mintChest and "OK" or "NOT FOUND"))
-print("  OUTPUT chest: " .. (storageStatus.outputChest and "OK" or "NOT FOUND"))
-print("  AUXILIARY chest: " .. (storageStatus.auxiliaryChest and "OK" or "NOT FOUND"))
-print("  Denomination chests: " .. storageStatus.denominationChestCount)
-print("  Void chests: " .. storageStatus.voidChestCount)
+print("  STORAGE chests: " .. storageStatus.storageChests)
+print("  Void chests: " .. storageStatus.voidChests)
 print("  Total chests: " .. storageStatus.totalChests)
 
 local encryptionKey = config.security.encryptionKey
