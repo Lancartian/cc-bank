@@ -265,11 +265,27 @@ loginBtn.onClick = function()
         return
     end
     
-    -- Response may be encrypted - response.data contains the actual data
+    -- Response data is encrypted - need to decrypt it
     local responseData = response.data
     
-    -- If responseData itself is nil, something went wrong
-    if not responseData then
+    -- Check if data is encrypted
+    if responseData.isEncrypted and responseData.encrypted and encryptionKey then
+        local decoded = crypto.base64Decode(responseData.encrypted)
+        local decrypted = crypto.decrypt(decoded, encryptionKey)
+        local success, data = pcall(textutils.unserialiseJSON, decrypted)
+        if success and data then
+            responseData = data
+        else
+            loginStatusLabel:setText("Failed to decrypt response")
+            loginStatusLabel.style.fgColor = colors.red
+            passwordInput:setText("")
+            root:markDirty()
+            return
+        end
+    end
+    
+    -- Verify we have the token
+    if not responseData or not responseData.token then
         loginStatusLabel:setText("Invalid response from server")
         loginStatusLabel.style.fgColor = colors.red
         passwordInput:setText("")
