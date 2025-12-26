@@ -47,7 +47,28 @@ network.MSG = {
 
 -- Open modem on specified port
 function network.init(port)
-    local modem = peripheral.find("modem")
+    -- First try to find a wireless modem (preferred for servers/pocket computers)
+    local modem = peripheral.find("modem", function(name, wrapped)
+        return wrapped.isWireless and wrapped.isWireless()
+    end)
+    
+    -- If no wireless modem, try any modem (including wired network modems)
+    if not modem then
+        modem = peripheral.find("modem")
+    end
+    
+    -- If still no modem, check all peripherals on the network
+    if not modem then
+        local peripherals = peripheral.getNames()
+        for _, name in ipairs(peripherals) do
+            local p = peripheral.wrap(name)
+            if p and p.isWireless then
+                modem = p
+                break
+            end
+        end
+    end
+    
     if not modem then
         error("No modem found")
     end
