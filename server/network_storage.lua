@@ -439,11 +439,12 @@ function networkStorage.getMintableItems()
         if slot ~= mintChest.markerSlot and item.name == config.currency.itemName then
             local detail = chest.getItemDetail(slot)
             if detail and detail.nbt then
+                -- detail.nbt is CC:Tweaked's built-in NBT hash string
                 table.insert(mintableItems, {
                     slot = slot,
                     name = item.name,
                     count = item.count,
-                    nbt = detail.nbt,
+                    nbt = detail.nbt,  -- Use CC's NBT hash directly
                     displayName = detail.displayName
                 })
             end

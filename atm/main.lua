@@ -573,14 +573,11 @@ local function scanLocalChest()
         -- Check if it's a signed book (minecraft:written_book)
         if item.name == "minecraft:written_book" or string.find(item.name, "written_book") then
             local detail = scanChest.getItemDetail(slot)
-            if detail then
-                -- Check if NBT data exists
-                -- In CC:Tweaked, detail.nbt is a hash string, not a table
-                if detail.nbt then
-                    table.insert(books, {
-                        nbtHash = detail.nbt  -- Send the hash directly
-                    })
-                end
+            if detail and detail.nbt then
+                -- detail.nbt is CC:Tweaked's built-in NBT hash string
+                table.insert(books, {
+                    nbtHash = detail.nbt
+                })
             end
         end
     end
