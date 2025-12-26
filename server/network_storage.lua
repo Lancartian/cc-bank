@@ -507,6 +507,7 @@ function networkStorage.getStatus()
     return {
         mintChest = mintChest ~= nil,
         outputChest = outputChest ~= nil,
+        auxiliaryChest = auxiliaryChest ~= nil,
         denominationChestCount = (function()
             local count = 0
             for _ in pairs(denominationChests) do count = count + 1 end

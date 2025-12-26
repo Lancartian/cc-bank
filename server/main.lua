@@ -77,7 +77,9 @@ local storageStatus = networkStorage.getStatus()
 print("\nNetwork Storage Status:")
 print("  MINT chest: " .. (storageStatus.mintChest and "OK" or "NOT FOUND"))
 print("  OUTPUT chest: " .. (storageStatus.outputChest and "OK" or "NOT FOUND"))
+print("  AUXILIARY chest: " .. (storageStatus.auxiliaryChest and "OK" or "NOT FOUND"))
 print("  Denomination chests: " .. storageStatus.denominationChestCount)
+print("  Void chests: " .. storageStatus.voidChestCount)
 print("  Total chests: " .. storageStatus.totalChests)
 
 local encryptionKey = config.security.encryptionKey

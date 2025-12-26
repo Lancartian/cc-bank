@@ -44,10 +44,11 @@ A comprehensive, secure banking system for ComputerCraft with military-grade enc
 
 ### 🏧 ATM Network
 - **Multiple ATMs**: Support for up to 16 ATMs with unique IDs
-- **Interface Only**: ATMs have no inventory - they're just user interface terminals
+- **Secure Two-Network Architecture**: ATM network isolated from backend network for security
 - **Authorization Required**: Only manager-authorized ATMs can register
 - **User-friendly interface**: Beautiful SGL-based touch interface
 - **Complete functionality**: Withdraw, deposit, transfer, and balance checks
+- **Smart deposit system**: ATM scans books locally, backend processes via auxiliary chest
 - **Void chest integration**: Backend pushes to void chests, Create Utilities handles delivery
 
 ### 🎮 Management Console
@@ -106,12 +107,14 @@ Option B - Manual installation:
    - Connect chests to the peripheral network using networking cables and wired modems:
      * 1 MINT chest (place paper named "MINT" inside)
      * 1 OUTPUT chest (place paper named "OUTPUT" inside)
+     * 1 AUXILIARY chest (place paper named "AUXILIARY" inside) - receives deposited books
      * 6+ denomination chests (place papers named "1", "5", "10", "20", "50", "100" inside)
        - You can have **multiple chests for the same denomination** for more storage
        - Example: 3 chests with "100" papers for $100 bills
      * 16 void chests for ATMs (name peripherals as "atm1", "atm2", etc. or "void_1", "void_2", etc.)
    - **Important**: Do NOT directly attach chests to the computer - only via wired modem network
    - Set void chest frequencies by placing two items in each void chest's frequency slots
+   - AUXILIARY chest receives books from deposit void chests (separate from ATM void chests)
 
 2. **Software Setup**:
    ```
@@ -173,10 +176,19 @@ Option B - Manual installation:
    - Configuration saves automatically
    - ATM starts and registers with server
 
-4. **Server Void Chest Setup**:
-   - On server's peripheral network, set the corresponding void chest to SAME frequency
-   - Example: If ATM #1 void chest has Stone + Stone, server's ATM #1 void chest must also have Stone + Stone
-   - Items pushed to server void chest will instantly appear in ATM void chest
+4. **Server Void Chest Setup for Withdrawals**:
+   - On server's peripheral network, set the corresponding ATM void chest to SAME frequency as ATM
+   - Example: If ATM #1 withdrawal void chest has Stone + Stone, server's ATM #1 void chest must also have Stone + Stone
+   - Items pushed to server void chest will instantly appear in ATM void chest for withdrawal
+
+5. **Server Deposit System Setup**:
+   - Set up a **separate deposit void chest** at each ATM location (not the withdrawal void chest)
+   - This deposit void chest transports books to the server's AUXILIARY chest
+   - On server side, connect the AUXILIARY chest to the backend network with a wired modem
+   - Place paper marker named "AUXILIARY" in the AUXILIARY chest
+   - Set AUXILIARY chest's associated deposit void chest to match ATM's deposit void chest frequency
+   - **Security**: ATM network and backend network remain completely isolated
+   - Books flow: ATM scan chest → user moves to deposit void chest → AUXILIARY chest → backend processes
 
 ## Void Chest Configuration
 
@@ -220,6 +232,7 @@ The system automatically scans the peripheral network and identifies chests by p
 **Special Chest Markers**:
 - **MINT chest**: Place a paper renamed to "MINT" inside
 - **OUTPUT chest**: Place a paper renamed to "OUTPUT" inside
+- **AUXILIARY chest**: Place a paper renamed to "AUXILIARY" inside (receives deposited books from void chests)
 - **Denomination chests**: Place papers with the denomination number in the name
   * The system extracts numbers from the display name and matches against valid denominations (1, 5, 10, 20, 50, 100)
   * Examples that work:
@@ -242,7 +255,7 @@ The system automatically scans the peripheral network and identifies chests by p
 **How to create marker papers**:
 1. Place paper in anvil
 2. Rename it to include the marker:
-   - "MINT" or "OUTPUT" for special chests
+   - "MINT", "OUTPUT", or "AUXILIARY" for special chests
    - Any denomination number (1, 5, 10, 20, 50, 100) for denomination chests
    - "ATM" + number (1-16) for void chests
 3. Place the renamed paper in the chest
@@ -403,6 +416,50 @@ CC-Bank uses **signed books (written_book)** as currency for built-in forgery pr
      * Items transfer wirelessly via Create Utilities void chest frequency matching
    - Currency is verified on every transaction using NBT hash
 
+### Secure Two-Network Deposit System
+
+The deposit system uses a sophisticated two-network architecture to maintain backend security:
+
+**Architecture**:
+1. **ATM Network** (front-facing, potentially compromised):
+   - Scan chest directly attached to ATM computer
+   - ATM reads NBT data from books locally
+   - Deposit void chest for user to manually transfer books
+   
+2. **Backend Network** (secure, isolated):
+   - AUXILIARY chest receives books from deposit void chests
+   - All denomination storage chests
+   - Server computer with wired modem network
+
+**Deposit Flow**:
+1. User places signed books in ATM's scan chest
+2. User clicks "Scan Currency" → ATM reads NBT locally without network access
+3. ATM sends NBT data to server for validation
+4. Server validates each book hash against currency registry
+5. Server stores hash→username mappings in deposit registry
+6. User manually moves books from scan chest to deposit void chest
+7. Books transport wirelessly to backend's AUXILIARY chest
+8. **Auxiliary chest processor** (runs in parallel with server):
+   - Scans AUXILIARY chest every 5 seconds
+   - For each book: computes hash → looks up owner → credits account → moves to denomination storage
+   - Handles multiple users depositing simultaneously
+   - Books can arrive in any order
+9. User clicks "Check Status" to verify deposit completion
+
+**Security Benefits**:
+- Backend network never connects to ATM network
+- ATM cannot access backend chests or manipulate storage
+- Hash registry prevents double-spending (same book can't be registered twice)
+- Ownership-agnostic currency (any valid bill works, regardless of who deposited it originally)
+- Backend location remains secret and secure
+
+**Technical Implementation**:
+- Server runs two processes in parallel using `parallel.waitForAny()`
+- Main server loop handles network messages
+- Auxiliary chest processor handles physical book arrival
+- Deposit registry stored in memory: `depositRegistry[nbtHash] = {username, value, denomination, processed}`
+- Books marked as processed when moved to storage, then credit applied on next status check
+
 ## Usage
 
 ### For Bank Users (ATM)
@@ -425,10 +482,12 @@ CC-Bank uses **signed books (written_book)** as currency for built-in forgery pr
 
 4. **Deposit**:
    - Select "Deposit"
-   - Insert currency into deposit slot
-   - Touch "Scan Currency"
-   - Enter amount
-   - Touch "Deposit"
+   - Place signed books in the **scan chest** (directly attached to ATM computer)
+   - Touch "Scan Currency" - ATM reads NBT from books locally
+   - Server validates and registers books to your account
+   - **Manually move books** from scan chest to the **deposit void chest**
+   - Touch "Check Status" to verify books arrived and were processed
+   - Account automatically credited when backend receives and processes books
 
 5. **Transfer**:
    - Select "Transfer"
