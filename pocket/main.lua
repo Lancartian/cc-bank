@@ -3,7 +3,7 @@
 
 local network = require("/lib/network")
 local crypto = require("/lib/crypto")
-local sgl = require("/lib/sgl")
+local sgl = require("/lib/sgl/sgl")
 
 -- Config
 local config = {
