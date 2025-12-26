@@ -63,10 +63,10 @@ local function showScreen(screenName)
     end
     
     -- Refresh data when showing certain screens
-    if screenName == "listATMs" and refreshATMList then
-        refreshATMList()
-    elseif screenName == "listAccounts" and refreshAccountList then
+    if screenName == "listAccounts" and refreshAccountList then
         refreshAccountList()
+    elseif screenName == "listItems" and refreshItemList then
+        refreshItemList()
     elseif screenName == "stats" and refreshStats then
         refreshStats()
     end
@@ -254,11 +254,11 @@ accountsBtn.onClick = function()
 end
 mainScreen:addChild(accountsBtn)
 
-local currencyBtn = sgl.Button:new(btnX, btnY + 3, btnWidth, btnHeight, "Mint Currency")
-currencyBtn.onClick = function()
-    showScreen("currency")
+local shopBtn = sgl.Button:new(btnX, btnY + 3, btnWidth, btnHeight, "Shop Management")
+shopBtn.onClick = function()
+    showScreen("shop")
 end
-mainScreen:addChild(currencyBtn)
+mainScreen:addChild(shopBtn)
 
 local statsBtn = sgl.Button:new(btnX, btnY + 6, btnWidth, btnHeight, "View Statistics")
 statsBtn.onClick = function()
@@ -266,13 +266,7 @@ statsBtn.onClick = function()
 end
 mainScreen:addChild(statsBtn)
 
-local atmBtn = sgl.Button:new(btnX, btnY + 9, btnWidth, btnHeight, "ATM Management")
-atmBtn.onClick = function()
-    showScreen("atm")
-end
-mainScreen:addChild(atmBtn)
-
-local exitBtn = sgl.Button:new(btnX, btnY + 12, btnWidth, btnHeight, "Exit")
+local exitBtn = sgl.Button:new(btnX, btnY + 9, btnWidth, btnHeight, "Exit")
 exitBtn.style.bgColor = colors.red
 exitBtn.onClick = function()
     app:stop()
@@ -309,56 +303,175 @@ end
 accountsScreen:addChild(accountsBackBtn)
 
 -- Currency screen
-local currencyScreen = sgl.Panel:new(2, 2, 47, 15)
-currencyScreen:setBorder(false)
-currencyScreen:setVisible(false)
-currencyScreen.data = {isScreen = true, screenName = "currency"}
-root:addChild(currencyScreen)
+-- Shop Management screen
+local shopScreen = sgl.Panel:new(2, 2, 47, 15)
+shopScreen:setBorder(false)
+shopScreen:setVisible(false)
+shopScreen.data = {isScreen = true, screenName = "shop"}
+root:addChild(shopScreen)
 
-local currencyTitle = sgl.Label:new(10, 1, "Currency Minting", 43)
-currencyTitle.style.fgColor = colors.yellow
-currencyScreen:addChild(currencyTitle)
+local shopTitle = sgl.Label:new(10, 1, "Shop Management", 43)
+shopTitle.style.fgColor = colors.yellow
+shopScreen:addChild(shopTitle)
 
-local currencyInfo = sgl.Label:new(2, 3, "Name books with denomination", 43)
-currencyScreen:addChild(currencyInfo)
+local addItemBtn = sgl.Button:new(3, 3, 18, 2, "Add Item")
+addItemBtn.onClick = function()
+    showScreen("addItem")
+end
+shopScreen:addChild(addItemBtn)
 
-local currencyInfo2 = sgl.Label:new(2, 4, "(e.g. '1 Token', '5 Credits')", 43)
-currencyScreen:addChild(currencyInfo2)
+local listItemsBtn = sgl.Button:new(23, 3, 18, 2, "List Items")
+listItemsBtn.onClick = function()
+    showScreen("listItems")
+end
+shopScreen:addChild(listItemsBtn)
 
-local currencyStatusLabel = sgl.Label:new(2, 6, "", 43)
-currencyScreen:addChild(currencyStatusLabel)
+local shopBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+shopBackBtn.onClick = function()
+    showScreen("main")
+end
+shopScreen:addChild(shopBackBtn)
 
-local mintBtn = sgl.Button:new(8, 9, 30, 3, "Process Mint Chest")
-mintBtn.style.bgColor = colors.green
-mintBtn.onClick = function()
-    currencyStatusLabel:setText("Processing...")
-    currencyStatusLabel.style.fgColor = colors.white
+-- Add Item screen
+local addItemScreen = sgl.Panel:new(2, 2, 47, 15)
+addItemScreen:setBorder(false)
+addItemScreen:setVisible(false)
+addItemScreen.data = {isScreen = true, screenName = "addItem"}
+root:addChild(addItemScreen)
+
+local addItemTitle = sgl.Label:new(10, 1, "Add Shop Item", 43)
+addItemTitle.style.fgColor = colors.yellow
+addItemScreen:addChild(addItemTitle)
+
+local nameLabel = sgl.Label:new(2, 3, "Item Name:", 43)
+addItemScreen:addChild(nameLabel)
+
+local nameInput = sgl.Input:new(2, 4, 40, 1)
+addItemScreen:addChild(nameInput)
+
+local priceLabel = sgl.Label:new(2, 5, "Price:", 43)
+addItemScreen:addChild(priceLabel)
+
+local priceInput = sgl.Input:new(2, 6, 40, 1)
+addItemScreen:addChild(priceInput)
+
+local categoryLabel = sgl.Label:new(2, 7, "Category:", 43)
+addItemScreen:addChild(categoryLabel)
+
+local categoryInput = sgl.Input:new(2, 8, 40, 1)
+addItemScreen:addChild(categoryInput)
+
+local descLabel = sgl.Label:new(2, 9, "Description:", 43)
+addItemScreen:addChild(descLabel)
+
+local descInput = sgl.Input:new(2, 10, 40, 1)
+addItemScreen:addChild(descInput)
+
+local addStatusLabel = sgl.Label:new(2, 11, "", 43)
+addItemScreen:addChild(addStatusLabel)
+
+local addBtn = sgl.Button:new(10, 12, 25, 2, "Add Item")
+addBtn.style.bgColor = colors.green
+addBtn.onClick = function()
+    local itemName = nameInput:getText()
+    local itemPrice = tonumber(priceInput:getText())
+    local itemCategory = categoryInput:getText()
+    local itemDesc = descInput:getText()
+    
+    if itemName == "" or not itemPrice or itemPrice <= 0 then
+        addStatusLabel:setText("Invalid name or price")
+        addStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    addStatusLabel:setText("Adding...")
+    addStatusLabel.style.fgColor = colors.white
     root:markDirty()
     
-    local result, err = sendToServer(network.MSG.CURRENCY_MINT, {
-        autoSort = true
+    local result, err = sendToServer(network.MSG.SHOP_MANAGE, {
+        action = "add",
+        itemName = itemName,
+        price = itemPrice,
+        category = itemCategory,
+        description = itemDesc
     })
     
     if result then
-        local msg = "Minted " .. result.totalAmount .. " Credits"
-        if result.processedCount then
-            msg = msg .. " (" .. result.processedCount .. " books)"
-        end
-        currencyStatusLabel:setText(msg)
-        currencyStatusLabel.style.fgColor = colors.green
+        addStatusLabel:setText("Item added successfully")
+        addStatusLabel.style.fgColor = colors.green
+        nameInput:setText("")
+        priceInput:setText("")
+        categoryInput:setText("")
+        descInput:setText("")
     else
-        currencyStatusLabel:setText("Error: " .. tostring(err))
-        currencyStatusLabel.style.fgColor = colors.red
+        addStatusLabel:setText("Error: " .. tostring(err))
+        addStatusLabel.style.fgColor = colors.red
     end
     root:markDirty()
 end
-currencyScreen:addChild(mintBtn)
+addItemScreen:addChild(addBtn)
 
-local currencyBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
-currencyBackBtn.onClick = function()
-    showScreen("main")
+local addItemBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
+addItemBackBtn.onClick = function()
+    showScreen("shop")
 end
-currencyScreen:addChild(currencyBackBtn)
+addItemScreen:addChild(addItemBackBtn)
+
+-- List Items screen
+local listItemsScreen = sgl.Panel:new(2, 2, 47, 15)
+listItemsScreen:setBorder(false)
+listItemsScreen:setVisible(false)
+listItemsScreen.data = {isScreen = true, screenName = "listItems"}
+root:addChild(listItemsScreen)
+
+local listItemsTitle = sgl.Label:new(10, 1, "Shop Items", 43)
+listItemsTitle.style.fgColor = colors.yellow
+listItemsScreen:addChild(listItemsTitle)
+
+local itemListLabels = {}
+for i = 1, 10 do
+    local label = sgl.Label:new(2, 2 + i, "", 43)
+    label.style.fgColor = colors.white
+    listItemsScreen:addChild(label)
+    itemListLabels[i] = label
+end
+
+local function refreshItemList()
+    local result, err = sendToServer(network.MSG.SHOP_BROWSE, {})
+    
+    if result and result.items then
+        local items = result.items
+        for i = 1, 10 do
+            if items[i] then
+                itemListLabels[i]:setText(items[i].displayName .. " - $" .. items[i].price)
+            else
+                itemListLabels[i]:setText("")
+            end
+        end
+        
+        if #items == 0 then
+            itemListLabels[1]:setText("No items in catalog")
+            itemListLabels[1].style.fgColor = colors.gray
+        end
+    else
+        itemListLabels[1]:setText("Error loading items")
+        itemListLabels[1].style.fgColor = colors.red
+    end
+    root:markDirty()
+end
+
+local listItemsBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
+listItemsBackBtn.onClick = function()
+    showScreen("shop")
+end
+listItemsScreen:addChild(listItemsBackBtn)
+
+local listItemsRefreshBtn = sgl.Button:new(20, 14, 20, 1, "Refresh")
+listItemsRefreshBtn.onClick = function()
+    refreshItemList()
+end
+listItemsScreen:addChild(listItemsRefreshBtn)
 
 -- Stats screen
 local statsScreen = sgl.Panel:new(2, 2, 47, 15)
@@ -418,13 +531,7 @@ local function refreshStats()
         stat2.style.fgColor = colors.white
         stat3:setText("Locked Accounts: " .. lockedCount)
         stat3.style.fgColor = lockedCount > 0 and colors.yellow or colors.white
-        
-        -- Count authorized ATMs
-        local atmCount = 0
-        for _ in pairs(config.management.authorizedATMs or {}) do
-            atmCount = atmCount + 1
-        end
-        stat4:setText("Authorized ATMs: " .. atmCount)
+        stat4:setText("")
         stat4.style.fgColor = colors.white
         
         statsStatusLabel:setText("Last updated: " .. os.date("%H:%M:%S"))
@@ -454,183 +561,6 @@ end
 statsScreen:addChild(statsBackBtn)
 
 -- ATM Management screen
-local atmScreen = sgl.Panel:new(2, 2, 47, 15)
-atmScreen:setBorder(false)
-atmScreen:setVisible(false)
-atmScreen.data = {isScreen = true, screenName = "atm"}
-root:addChild(atmScreen)
-
-local atmTitle = sgl.Label:new(10, 1, "ATM Management", 43)
-atmTitle.style.fgColor = colors.yellow
-atmScreen:addChild(atmTitle)
-
-local authorizeBtn = sgl.Button:new(3, 3, 18, 2, "Authorize ATM")
-authorizeBtn.onClick = function()
-    showScreen("authorizeATM")
-end
-atmScreen:addChild(authorizeBtn)
-
-local listATMBtn = sgl.Button:new(23, 3, 18, 2, "List ATMs")
-listATMBtn.onClick = function()
-    showScreen("listATMs")
-end
-atmScreen:addChild(listATMBtn)
-
-local atmBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
-atmBackBtn.onClick = function()
-    showScreen("main")
-end
-atmScreen:addChild(atmBackBtn)
-
--- Authorize ATM screen
-local authorizeATMScreen = sgl.Panel:new(2, 2, 47, 15)
-authorizeATMScreen:setBorder(false)
-authorizeATMScreen:setVisible(false)
-authorizeATMScreen.data = {isScreen = true, screenName = "authorizeATM"}
-root:addChild(authorizeATMScreen)
-
-local authTitle = sgl.Label:new(10, 1, "Authorize ATM", 43)
-authTitle.style.fgColor = colors.yellow
-authorizeATMScreen:addChild(authTitle)
-
-local idLabel = sgl.Label:new(2, 3, "ATM ID (1-16):", 43)
-authorizeATMScreen:addChild(idLabel)
-
-local idInput = sgl.Input:new(2, 4, 40, 1)
-authorizeATMScreen:addChild(idInput)
-
-local authInfoLabel = sgl.Label:new(2, 6, "Set void chest frequency in-game", 43)
-authInfoLabel.style.fgColor = colors.gray
-authorizeATMScreen:addChild(authInfoLabel)
-
-local authStatusLabel = sgl.Label:new(2, 8, "", 43)
-authorizeATMScreen:addChild(authStatusLabel)
-
-local authTokenLabel = sgl.Label:new(2, 10, "", 43)
-authTokenLabel.style.fgColor = colors.yellow
-authorizeATMScreen:addChild(authTokenLabel)
-
-local authBtn = sgl.Button:new(10, 12, 25, 2, "Authorize")
-authBtn.style.bgColor = colors.green
-authBtn.onClick = function()
-    local atmID = idInput:getText()
-    
-    if atmID == "" then
-        authStatusLabel:setText("Please enter ATM ID")
-        authStatusLabel.style.fgColor = colors.red
-        authTokenLabel:setText("")
-        root:markDirty()
-        return
-    end
-    
-    local atmNum = tonumber(atmID)
-    if not atmNum or atmNum < 1 or atmNum > 16 then
-        authStatusLabel:setText("ATM ID must be between 1 and 16")
-        authStatusLabel.style.fgColor = colors.red
-        authTokenLabel:setText("")
-        root:markDirty()
-        return
-    end
-    
-    local token = crypto.generateATMToken()
-    
-    -- Send authorization to server
-    authStatusLabel:setText("Authorizing...")
-    authStatusLabel.style.fgColor = colors.white
-    authTokenLabel:setText("")
-    root:markDirty()
-    
-    local result, err = sendToServer(network.MSG.ATM_AUTHORIZE, {
-        atmID = atmID,
-        authToken = token
-    })
-    
-    if not result then
-        authStatusLabel:setText("Error: " .. tostring(err))
-        authStatusLabel.style.fgColor = colors.red
-        authTokenLabel:setText("")
-        root:markDirty()
-        return
-    end
-    
-    -- Also save locally for reference
-    config.management.authorizedATMs[atmID] = {
-        token = token,
-        authorized = os.epoch("utc")
-    }
-    config.save()
-    
-    authStatusLabel:setText("Authorized! Enter on ATM:")
-    authStatusLabel.style.fgColor = colors.green
-    authTokenLabel:setText("ID: " .. atmID .. " Token: " .. token)
-    print("\n========================================")
-    print("ATM #" .. atmID .. " Authorization")
-    print("========================================")
-    print("Token: " .. token)
-    print("========================================\n")
-    root:markDirty()
-end
-authorizeATMScreen:addChild(authBtn)
-
-local authBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
-authBackBtn.onClick = function()
-    showScreen("atm")
-end
-authorizeATMScreen:addChild(authBackBtn)
-
--- List ATMs screen
-local listATMsScreen = sgl.Panel:new(2, 2, 47, 15)
-listATMsScreen:setBorder(false)
-listATMsScreen:setVisible(false)
-listATMsScreen.data = {isScreen = true, screenName = "listATMs"}
-root:addChild(listATMsScreen)
-
-local listATMTitle = sgl.Label:new(10, 1, "Authorized ATMs", 43)
-listATMTitle.style.fgColor = colors.yellow
-listATMsScreen:addChild(listATMTitle)
-
-local atmListLabels = {}
-for i = 1, 10 do
-    local label = sgl.Label:new(2, 2 + i, "", 43)
-    label.style.fgColor = colors.white
-    listATMsScreen:addChild(label)
-    atmListLabels[i] = label
-end
-
--- Function to refresh ATM list
-local function refreshATMList()
-    local count = 0
-    for atmID, data in pairs(config.management.authorizedATMs) do
-        count = count + 1
-        if count <= 10 then
-            atmListLabels[count]:setText("ATM #" .. atmID .. " - Token: " .. data.token)
-        end
-    end
-    
-    if count == 0 then
-        atmListLabels[1]:setText("No ATMs authorized yet")
-        atmListLabels[1].style.fgColor = colors.gray
-    else
-        for i = count + 1, 10 do
-            atmListLabels[i]:setText("")
-        end
-    end
-    root:markDirty()
-end
-
-local listATMBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
-listATMBackBtn.onClick = function()
-    showScreen("atm")
-end
-listATMsScreen:addChild(listATMBackBtn)
-
-local listATMRefreshBtn = sgl.Button:new(20, 14, 20, 1, "Refresh")
-listATMRefreshBtn.onClick = function()
-    config.load()
-    refreshATMList()
-end
-listATMsScreen:addChild(listATMRefreshBtn)
-
 -- Create Account screen
 local createAccountScreen = sgl.Panel:new(2, 2, 47, 15)
 createAccountScreen:setBorder(false)
