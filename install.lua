@@ -67,13 +67,17 @@ local function downloadFile(url, path)
         print("  (backed up existing file)")
     end
     
+    -- Delete existing file to ensure wget can write
+    if fs.exists(path) then
+        fs.delete(path)
+    end
+    
     local success = shell.run("wget", url, path)
     if not success then
         print("ERROR: Failed to download " .. path)
         
         -- In update mode, restore backup on failure
         if isUpdate and fs.exists(path .. ".backup") then
-            fs.delete(path)
             fs.move(path .. ".backup", path)
             print("  (restored from backup)")
         end
