@@ -200,6 +200,32 @@ print("")
 print("Installing: " .. component)
 print("")
 
+-- Clean up old files for fresh install
+if not isUpdate then
+    print("Fresh install: Cleaning up old files...")
+    
+    -- Remove all program directories
+    local cleanupDirs = {"/lib", "/server", "/management", "/pocket"}
+    for _, dir in ipairs(cleanupDirs) do
+        if fs.exists(dir) then
+            print("  Removing: " .. dir)
+            fs.delete(dir)
+        end
+    end
+    
+    -- Remove root files
+    local cleanupFiles = {"config.lua", "startup.lua"}
+    for _, file in ipairs(cleanupFiles) do
+        if fs.exists(file) then
+            print("  Removing: " .. file)
+            fs.delete(file)
+        end
+    end
+    
+    print("Cleanup complete!")
+    print("")
+end
+
 -- Backup data directory if updating
 if isUpdate then
     if not backupData() then
