@@ -343,22 +343,18 @@ local btnX = 5
 
 local checkBalanceBtn = sgl.Button:new(btnX, 5, btnWidth, btnHeight, "Check Balance")
 checkBalanceBtn.onClick = function()
-    showScreen("checkBalance")
-    -- Fetch latest balance
+    -- Fetch latest balance and update in place
     local response, err = sendToServer(network.MSG.BALANCE_CHECK, {}, true)
     
     if response then
         balance = response.balance
-        balanceDisplayLabel:setText(tostring(balance) .. " " .. config.currency.displayNamePlural)
-        balanceDisplayLabel.style.fgColor = colors.green
-        accountDisplayLabel:setText("Account: " .. accountNumber)
-        accountDisplayLabel.style.fgColor = colors.white
+        updateMenuLabels()
     else
-        balanceDisplayLabel:setText("Error: " .. tostring(err))
-        balanceDisplayLabel.style.fgColor = colors.red
-        accountDisplayLabel:setText("")
+        -- Show error briefly
+        balanceLabel:setText("Error: " .. tostring(err))
+        balanceLabel.style.fgColor = colors.red
+        root:markDirty()
     end
-    root:markDirty()
 end
 menuScreen:addChild(checkBalanceBtn)
 
@@ -524,12 +520,23 @@ depositScreen:addChild(depositStatusLabel)
 
 -- Find scan chest (directly attached inventory)
 local function findScanChest()
+    -- First check directly attached sides
     local sides = {"left", "right", "top", "bottom", "front", "back"}
     for _, side in ipairs(sides) do
         if peripheral.hasType(side, "inventory") then
             return peripheral.wrap(side)
         end
     end
+    
+    -- If not found directly attached, search peripheral network
+    local peripherals = peripheral.getNames()
+    for _, name in ipairs(peripherals) do
+        if peripheral.hasType(name, "inventory") then
+            -- Found a chest on the network
+            return peripheral.wrap(name)
+        end
+    end
+    
     return nil
 end
 

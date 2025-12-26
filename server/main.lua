@@ -954,7 +954,8 @@ local function serverLoop()
                            message.type == network.MSG.BALANCE_CHECK or
                            message.type == network.MSG.WITHDRAW or
                            message.type == network.MSG.DEPOSIT or
-                           message.type == network.MSG.TRANSFER then
+                           message.type == network.MSG.TRANSFER or
+                           message.type == network.MSG.CURRENCY_VERIFY then
                         responsePort = config.atm.port
                     end
                     
