@@ -62,7 +62,7 @@ local function clearScreen()
 end
 
 local function showError(message)
-    local errorLabel = sgl.Label:new(2, h - 2, w - 2, message)
+    local errorLabel = sgl.Label:new(2, h - 2, message, w - 2)
     errorLabel.style.fgColor = colors.red
     root:addChild(errorLabel)
     root:markDirty()
@@ -75,17 +75,17 @@ local function showLogin()
     clearScreen()
     currentScreen = "login"
     
-    local title = sgl.Label:new(2, 2, w - 2, "CC-Bank")
+    local title = sgl.Label:new(2, 2, "CC-Bank", w - 2)
     title.style.fgColor = colors.yellow
     root:addChild(title)
     
-    local usernameLabel = sgl.Label:new(2, 4, w - 2, "Username:")
+    local usernameLabel = sgl.Label:new(2, 4, "Username:", w - 2)
     root:addChild(usernameLabel)
     
     local usernameInput = sgl.Input:new(2, 5, w - 2, "")
     root:addChild(usernameInput)
     
-    local passwordLabel = sgl.Label:new(2, 7, w - 2, "Password:")
+    local passwordLabel = sgl.Label:new(2, 7, "Password:", w - 2)
     root:addChild(passwordLabel)
     
     local passwordInput = sgl.Input:new(2, 8, w - 2, "")
@@ -145,11 +145,11 @@ local function showMenu()
         balance = response.data.balance
     end
     
-    local title = sgl.Label:new(2, 1, w - 2, username)
+    local title = sgl.Label:new(2, 1, username, w - 2)
     title.style.fgColor = colors.yellow
     root:addChild(title)
     
-    local balanceLabel = sgl.Label:new(2, 2, w - 2, "Balance: $" .. balance)
+    local balanceLabel = sgl.Label:new(2, 2, "Balance: $" .. balance, w - 2)
     balanceLabel.style.fgColor = colors.lime
     root:addChild(balanceLabel)
     
@@ -179,11 +179,11 @@ local function showShop()
     clearScreen()
     currentScreen = "shop"
     
-    local title = sgl.Label:new(2, 1, w - 2, "Shop")
+    local title = sgl.Label:new(2, 1, "Shop", w - 2)
     title.style.fgColor = colors.yellow
     root:addChild(title)
     
-    local statusLabel = sgl.Label:new(2, 2, w - 2, "Loading...")
+    local statusLabel = sgl.Label:new(2, 2, "Loading...", w - 2)
     root:addChild(statusLabel)
     
     local backBtn = sgl.Button:new(2, h - 1, w - 2, 1, "Back")
@@ -232,17 +232,17 @@ local function showPurchase(item)
     clearScreen()
     currentScreen = "purchase"
     
-    local title = sgl.Label:new(2, 1, w - 2, item.displayName)
+    local title = sgl.Label:new(2, 1, item.displayName, w - 2)
     title.style.fgColor = colors.yellow
     root:addChild(title)
     
-    local priceLabel = sgl.Label:new(2, 3, w - 2, "Price: $" .. item.price)
+    local priceLabel = sgl.Label:new(2, 3, "Price: $" .. item.price, w - 2)
     root:addChild(priceLabel)
     
-    local stockLabel = sgl.Label:new(2, 4, w - 2, "Stock: " .. item.stock)
+    local stockLabel = sgl.Label:new(2, 4, "Stock: " .. item.stock, w - 2)
     root:addChild(stockLabel)
     
-    local qtyLabel = sgl.Label:new(2, 6, w - 2, "Quantity:")
+    local qtyLabel = sgl.Label:new(2, 6, "Quantity:", w - 2)
     root:addChild(qtyLabel)
     
     local qtyInput = sgl.Input:new(2, 7, w - 2, "1")
@@ -284,17 +284,17 @@ local function showTransfer()
     clearScreen()
     currentScreen = "transfer"
     
-    local title = sgl.Label:new(2, 1, w - 2, "Transfer")
+    local title = sgl.Label:new(2, 1, "Transfer", w - 2)
     title.style.fgColor = colors.yellow
     root:addChild(title)
     
-    local toLabel = sgl.Label:new(2, 3, w - 2, "To:")
+    local toLabel = sgl.Label:new(2, 3, "To:", w - 2)
     root:addChild(toLabel)
     
     local toInput = sgl.Input:new(2, 4, w - 2, "")
     root:addChild(toInput)
     
-    local amountLabel = sgl.Label:new(2, 6, w - 2, "Amount:")
+    local amountLabel = sgl.Label:new(2, 6, "Amount:", w - 2)
     root:addChild(amountLabel)
     
     local amountInput = sgl.Input:new(2, 7, w - 2, "")
