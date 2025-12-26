@@ -114,8 +114,10 @@ print("Currency supply: " .. supply.totalValue .. " " .. config.currency.display
 -- Session management functions
 local function createSession(accountNumber)
     local token = crypto.generateToken()
+    local account = accounts.get(accountNumber)
     sessions[token] = {
         accountNumber = accountNumber,
+        username = account.username,
         created = os.epoch("utc"),
         lastActivity = os.epoch("utc")
     }
