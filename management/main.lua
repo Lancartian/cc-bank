@@ -326,6 +326,13 @@ listItemsBtn.onClick = function()
 end
 shopScreen:addChild(listItemsBtn)
 
+local processBtn = sgl.Button:new(3, 6, 38, 2, "Process INPUT Chests")
+processBtn.style.bgColor = colors.green
+processBtn.onClick = function()
+    showScreen("processItems")
+end
+shopScreen:addChild(processBtn)
+
 local shopBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
 shopBackBtn.onClick = function()
     showScreen("main")
@@ -472,6 +479,56 @@ listItemsRefreshBtn.onClick = function()
     refreshItemList()
 end
 listItemsScreen:addChild(listItemsRefreshBtn)
+
+-- Process Items screen
+local processItemsScreen = sgl.Panel:new(2, 2, 47, 15)
+processItemsScreen:setBorder(false)
+processItemsScreen:setVisible(false)
+processItemsScreen.data = {isScreen = true, screenName = "processItems"}
+root:addChild(processItemsScreen)
+
+local processTitle = sgl.Label:new(10, 1, "Process INPUT Chests", 43)
+processTitle.style.fgColor = colors.yellow
+processItemsScreen:addChild(processTitle)
+
+local processInfo = sgl.Label:new(2, 3, "Move items from INPUT to STORAGE", 43)
+processInfo.style.fgColor = colors.gray
+processItemsScreen:addChild(processInfo)
+
+local processStatusLabel = sgl.Label:new(2, 5, "", 43)
+processItemsScreen:addChild(processStatusLabel)
+
+local processStartBtn = sgl.Button:new(10, 7, 27, 3, "Process Now")
+processStartBtn.style.bgColor = colors.green
+processStartBtn.onClick = function()
+    processStatusLabel:setText("Processing...")
+    processStatusLabel.style.fgColor = colors.white
+    root:markDirty()
+    
+    local result, err = sendToServer(network.MSG.SHOP_MANAGE, {
+        action = "process"
+    })
+    
+    if result then
+        local msg = "Processed " .. (result.itemsProcessed or 0) .. " item stacks"
+        if result.uniqueTypes then
+            msg = msg .. " (" .. result.uniqueTypes .. " types)"
+        end
+        processStatusLabel:setText(msg)
+        processStatusLabel.style.fgColor = colors.green
+    else
+        processStatusLabel:setText("Error: " .. tostring(err))
+        processStatusLabel.style.fgColor = colors.red
+    end
+    root:markDirty()
+end
+processItemsScreen:addChild(processStartBtn)
+
+local processBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+processBackBtn.onClick = function()
+    showScreen("shop")
+end
+processItemsScreen:addChild(processBackBtn)
 
 -- Stats screen
 local statsScreen = sgl.Panel:new(2, 2, 47, 15)

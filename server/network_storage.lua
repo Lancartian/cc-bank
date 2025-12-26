@@ -7,11 +7,13 @@ local networkStorage = {}
 
 -- Storage state
 local storageChests = {}  -- Multiple chests labeled "STORAGE" for shop items
+local inputChests = {}    -- Chests labeled "INPUT" for items to be processed
 local voidChests = {}  -- User void chests for delivery
 local allChests = {}  -- All registered chests
 
 -- Marker names for special chests
 local STORAGE_MARKER = "STORAGE"
+local INPUT_MARKER = "INPUT"
 
 -- Get all peripheral names excluding directly attached ones
 local function getNetworkPeripherals()
@@ -58,6 +60,7 @@ function networkStorage.scanNetwork()
     
     -- Reset storage state
     storageChests = {}
+    inputChests = {}
     voidChests = {}
     allChests = {}
     
@@ -87,6 +90,10 @@ function networkStorage.scanNetwork()
                     if marker == STORAGE_MARKER then
                         table.insert(storageChests, chestInfo)
                         print("  STORAGE chest: " .. peripheralName)
+                    -- Handle INPUT chests (multiple allowed)
+                    elseif marker == INPUT_MARKER then
+                        table.insert(inputChests, chestInfo)
+                        print("  INPUT chest: " .. peripheralName)
                     -- Handle user void chests (username-based)
                     else
                         -- Any other marker is treated as a user void chest
@@ -102,6 +109,7 @@ function networkStorage.scanNetwork()
     
     print("Network scan complete:")
     print("  STORAGE chests: " .. #storageChests)
+    print("  INPUT chests: " .. #inputChests)
     print("  Void chests: " .. tableCount(voidChests))
     print("  Total chests: " .. #allChests)
     
@@ -111,6 +119,84 @@ end
 -- Get all STORAGE chests
 function networkStorage.getStorageChests()
     return storageChests
+end
+
+-- Get all INPUT chests
+function networkStorage.getInputChests()
+    return inputChests
+end
+
+-- Process items from INPUT chests into STORAGE (smart organization)
+function networkStorage.processInputChests()
+    if #inputChests == 0 then
+        return 0, "No INPUT chests found"
+    end
+    
+    if #storageChests == 0 then
+        return 0, "No STORAGE chests available"
+    end
+    
+    local itemsProcessed = 0
+    local itemTypes = {}
+    
+    -- Process each input chest
+    for _, inputChest in ipairs(inputChests) do
+        local items = inputChest.peripheral.list()
+        
+        -- Process each slot in input chest
+        for slot, item in pairs(items) do
+            if slot ~= inputChest.markerSlot then  -- Skip marker
+                local remaining = item.count
+                
+                -- Phase 1: Try to stack with existing items in STORAGE
+                for _, storageChest in ipairs(storageChests) do
+                    if remaining <= 0 then break end
+                    
+                    -- Find existing stacks of same item
+                    local storageItems = storageChest.peripheral.list()
+                    for storageSlot, storageItem in pairs(storageItems) do
+                        if storageSlot ~= storageChest.markerSlot and storageItem.name == item.name and remaining > 0 then
+                            -- Try to push to this existing stack
+                            local transferred = inputChest.peripheral.pushItems(storageChest.name, slot, remaining, storageSlot)
+                            
+                            if transferred > 0 then
+                                remaining = remaining - transferred
+                                if remaining <= 0 then break end
+                            end
+                        end
+                    end
+                end
+                
+                -- Phase 2: If items remain, find empty slots
+                if remaining > 0 then
+                    for _, storageChest in ipairs(storageChests) do
+                        if remaining <= 0 then break end
+                        
+                        -- Push to any available slot
+                        local transferred = inputChest.peripheral.pushItems(storageChest.name, slot, remaining)
+                        
+                        if transferred > 0 then
+                            remaining = remaining - transferred
+                            if remaining <= 0 then break end
+                        end
+                    end
+                end
+                
+                -- Track what we processed
+                if remaining < item.count then
+                    itemsProcessed = itemsProcessed + 1
+                    itemTypes[item.name] = true
+                end
+            end
+        end
+    end
+    
+    local uniqueTypes = 0
+    for _ in pairs(itemTypes) do
+        uniqueTypes = uniqueTypes + 1
+    end
+    
+    return itemsProcessed, uniqueTypes
 end
 
 -- Get void chest for a specific user

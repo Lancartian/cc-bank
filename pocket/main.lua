@@ -190,18 +190,23 @@ local function showShop()
             statusLabel:setText("No items available")
             root:addChild(statusLabel)
         else
-            local yPos = 3
+            -- Create scrollable list
+            local itemList = sgl.List:new(2, 3, w - 2, h - 5)
+            local itemNames = {}
+            local itemData = {}
+            
             for i, item in ipairs(items) do
-                if i > 10 then break end  -- Limit for small screen
-                
-                local itemBtn = sgl.Button:new(2, yPos, w - 2, 1, 
-                    item.displayName .. " $" .. item.price)
-                itemBtn.onClick = function()
-                    showPurchase(item)
-                end
-                root:addChild(itemBtn)
-                yPos = yPos + 1
+                table.insert(itemNames, item.displayName .. " - $" .. item.price .. " (x" .. item.stock .. ")")
+                itemData[i] = item
             end
+            
+            itemList:setItems(itemNames)
+            itemList.onSelectionChanged = function(index, text)
+                if itemData[index] then
+                    showPurchase(itemData[index])
+                end
+            end
+            root:addChild(itemList)
         end
     else
         statusLabel:setText("Error: " .. tostring(err))

@@ -591,6 +591,20 @@ handlers[network.MSG.SHOP_MANAGE] = function(message, sender)
             itemName = itemName,
             price = price
         })
+        
+    elseif action == "process" then
+        -- Process items from INPUT chests to STORAGE
+        local itemsProcessed, uniqueTypes = networkStorage.processInputChests()
+        
+        if not itemsProcessed then
+            return network.errorResponse("process_error", uniqueTypes or "Failed to process items")
+        end
+        
+        return network.successResponse({
+            message = "Items processed",
+            itemsProcessed = itemsProcessed,
+            uniqueTypes = uniqueTypes
+        })
     else
         return network.errorResponse("invalid_action", "Unknown action: " .. tostring(action))
     end
