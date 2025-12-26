@@ -54,6 +54,13 @@ local function sendToServer(msgType, data, waitForResponse)
     return true, nil
 end
 
+local function clearScreen()
+    -- Remove all children from root panel
+    while root.children and #root.children > 0 do
+        root:removeChild(root.children[1])
+    end
+end
+
 local function showError(message)
     local errorLabel = sgl.Label:new(2, h - 2, w - 2, message)
     errorLabel.style.fgColor = colors.red
@@ -65,7 +72,7 @@ end
 
 -- Login Screen
 local function showLogin()
-    root:clearChildren()
+    clearScreen()
     currentScreen = "login"
     
     local title = sgl.Label:new(2, 2, w - 2, "CC-Bank")
@@ -87,8 +94,8 @@ local function showLogin()
     
     local loginBtn = sgl.Button:new(2, 10, w - 2, 1, "Login")
     loginBtn.onClick = function()
-        local user = usernameInput:getText()
-        local pass = passwordInput:getText()
+        local user = usernameInput.text
+        local pass = passwordInput.text
         
         if user == "" or pass == "" then
             showError("Enter username and password")
@@ -129,7 +136,7 @@ end
 
 -- Main Menu Screen
 local function showMenu()
-    root:clearChildren()
+    clearScreen()
     currentScreen = "menu"
     
     -- Update balance
@@ -169,7 +176,7 @@ end
 
 -- Shop Screen
 local function showShop()
-    root:clearChildren()
+    clearScreen()
     currentScreen = "shop"
     
     local title = sgl.Label:new(2, 1, w - 2, "Shop")
@@ -192,7 +199,7 @@ local function showShop()
         
         local items = response.data.items
         if #items == 0 then
-            statusLabel:setText("No items available")
+            statusLabel.text = "No items available"
             root:addChild(statusLabel)
         else
             -- Create scrollable list
@@ -205,7 +212,7 @@ local function showShop()
                 itemData[i] = item
             end
             
-            itemList:setItems(itemNames)
+            itemList.items = itemNames
             itemList.onSelectionChanged = function(index, text)
                 if itemData[index] then
                     showPurchase(itemData[index])
@@ -214,7 +221,7 @@ local function showShop()
             root:addChild(itemList)
         end
     else
-        statusLabel:setText("Error: " .. tostring(err))
+        statusLabel.text = "Error: " .. tostring(err)
     end
     
     root:markDirty()
@@ -222,7 +229,7 @@ end
 
 -- Purchase Screen
 local function showPurchase(item)
-    root:clearChildren()
+    clearScreen()
     currentScreen = "purchase"
     
     local title = sgl.Label:new(2, 1, w - 2, item.displayName)
@@ -244,7 +251,7 @@ local function showPurchase(item)
     local buyBtn = sgl.Button:new(2, 9, w - 2, 1, "Buy")
     buyBtn.style.bgColor = colors.green
     buyBtn.onClick = function()
-        local qty = tonumber(qtyInput:getText())
+        local qty = tonumber(qtyInput.text)
         if not qty or qty <= 0 then
             showError("Invalid quantity")
             return
@@ -274,7 +281,7 @@ end
 
 -- Transfer Screen
 local function showTransfer()
-    root:clearChildren()
+    clearScreen()
     currentScreen = "transfer"
     
     local title = sgl.Label:new(2, 1, w - 2, "Transfer")
@@ -296,8 +303,8 @@ local function showTransfer()
     local sendBtn = sgl.Button:new(2, 9, w - 2, 1, "Send")
     sendBtn.style.bgColor = colors.green
     sendBtn.onClick = function()
-        local toUser = toInput:getText()
-        local amount = tonumber(amountInput:getText())
+        local toUser = toInput.text
+        local amount = tonumber(amountInput.text)
         
         if toUser == "" or not amount or amount <= 0 then
             showError("Invalid transfer")
