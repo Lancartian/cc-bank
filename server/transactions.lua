@@ -165,13 +165,13 @@ function transactions.adminAdjustment(accountNumber, amount, reason, adminID)
     )
 end
 
-function transactions.currencyMint(amount, adminID)
+function transactions.purchase(accountNumber, itemName, quantity, totalCost)
     return transactions.log(
-        transactions.TYPE.CURRENCY_MINT,
+        "purchase",
+        accountNumber,
         nil,
-        nil,
-        amount,
-        { adminID = adminID }
+        totalCost,
+        { itemName = itemName, quantity = quantity }
     )
 end
 

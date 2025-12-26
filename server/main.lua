@@ -7,6 +7,7 @@ local crypto = require("/lib/crypto")
 local accounts = require("/server/accounts")
 local transactions = require("/server/transactions")
 local networkStorage = require("/server/network_storage")
+local catalog = require("/server/catalog")
 
 -- Initialize configuration
 config.init()
@@ -100,9 +101,16 @@ print("Listening on port: " .. config.server.port)
 print("\nLoading data...")
 accounts.load()
 transactions.load()
+catalog.load()
+networkStorage.initialize()
 
 print("Accounts loaded: " .. #accounts.list())
 print("Transactions loaded: " .. transactions.getStats().totalTransactions)
+local catalogStats = catalog.getStats()
+print("Catalog items: " .. catalogStats.totalItems)
+local storageInfo = networkStorage.getChestInfo()
+print("Storage chests: " .. storageInfo.storageChests)
+print("Void chests: " .. storageInfo.voidChests)
 
 -- Session management functions
 local function createSession(accountNumber)
@@ -381,6 +389,129 @@ handlers[network.MSG.BALANCE_CHECK] = function(message, sender)
     return network.successResponse({
         balance = balance,
         accountNumber = session.accountNumber
+    })
+end
+
+-- Shop browse
+handlers[network.MSG.SHOP_BROWSE] = function(message, sender)
+    -- Check nonce
+    local nonceValid, nonceErr = checkNonce(message.nonce, message.timestamp)
+    if not nonceValid then
+        return network.errorResponse("replay_attack", nonceErr or "Replay attack detected")
+    end
+    
+    local session, err = validateSession(message.token)
+    if not session then
+        return network.errorResponse("session_error", err)
+    end
+    
+    local category = message.data.category
+    local searchQuery = message.data.search
+    
+    local items = {}
+    
+    if searchQuery then
+        items = catalog.search(searchQuery)
+    elseif category then
+        items = catalog.getItemsByCategory(category)
+    else
+        items = catalog.getAllItems()
+    end
+    
+    -- Get available stock from storage
+    local storageItems = networkStorage.scanStorageItems()
+    
+    -- Merge catalog prices with storage availability
+    local availableItems = {}
+    for _, catalogItem in ipairs(items) do
+        local stockInfo = storageItems[catalogItem.name]
+        table.insert(availableItems, {
+            name = catalogItem.name,
+            displayName = stockInfo and stockInfo.displayName or catalogItem.name,
+            price = catalogItem.price,
+            category = catalogItem.category,
+            description = catalogItem.description,
+            stock = stockInfo and stockInfo.count or 0
+        })
+    end
+    
+    return network.successResponse({
+        items = availableItems,
+        categories = catalog.getCategories()
+    })
+end
+
+-- Shop purchase
+handlers[network.MSG.SHOP_PURCHASE] = function(message, sender)
+    -- Check nonce
+    local nonceValid, nonceErr = checkNonce(message.nonce, message.timestamp)
+    if not nonceValid then
+        return network.errorResponse("replay_attack", nonceErr or "Replay attack detected")
+    end
+    
+    local session, err = validateSession(message.token)
+    if not session then
+        return network.errorResponse("session_error", err)
+    end
+    
+    local itemName = message.data.itemName
+    local quantity = message.data.quantity or 1
+    
+    if not itemName then
+        return network.errorResponse("missing_fields", "Item name required")
+    end
+    
+    if quantity <= 0 then
+        return network.errorResponse("invalid_quantity", "Quantity must be positive")
+    end
+    
+    -- Get item from catalog
+    local catalogItem = catalog.getItem(itemName)
+    if not catalogItem then
+        return network.errorResponse("item_not_found", "Item not in catalog")
+    end
+    
+    -- Calculate total cost
+    local totalCost = catalogItem.price * quantity
+    
+    -- Check balance
+    local balance = accounts.getBalance(session.accountNumber)
+    if balance < totalCost then
+        return network.errorResponse("insufficient_funds", "Insufficient funds")
+    end
+    
+    -- Check stock availability
+    local storageItems = networkStorage.scanStorageItems()
+    local stockInfo = storageItems[itemName]
+    if not stockInfo or stockInfo.count < quantity then
+        return network.errorResponse("insufficient_stock", "Not enough items in stock")
+    end
+    
+    -- Deduct balance
+    local success, err = accounts.updateBalance(session.accountNumber, -totalCost)
+    if not success then
+        return network.errorResponse("balance_update_error", err)
+    end
+    
+    -- Deliver items to user's void chest
+    local account = accounts.get(session.accountNumber)
+    local delivered, deliverErr = networkStorage.deliverToUser(account.username, itemName, quantity)
+    
+    if not delivered then
+        -- Refund on delivery failure
+        accounts.updateBalance(session.accountNumber, totalCost)
+        return network.errorResponse("delivery_failed", deliverErr or "Could not deliver items")
+    end
+    
+    -- Log transaction
+    local txID = transactions.purchase(session.accountNumber, itemName, quantity, totalCost)
+    
+    return network.successResponse({
+        transactionID = txID,
+        itemName = itemName,
+        quantity = quantity,
+        totalCost = totalCost,
+        newBalance = accounts.getBalance(session.accountNumber)
     })
 end
 
