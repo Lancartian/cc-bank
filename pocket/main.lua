@@ -92,7 +92,11 @@ local function showLogin()
     passwordInput.masked = true
     root:addChild(passwordInput)
     
-    local loginBtn = sgl.Button:new(2, 10, w - 2, 1, "Login")
+    local loginBtnLabel = sgl.Label:new(2, 10, "[Login]", w - 2)
+    loginBtnLabel.style.fgColor = colors.lime
+    root:addChild(loginBtnLabel)
+    
+    local loginBtn = sgl.Clickable:new(2, 10, w - 2, 1)
     loginBtn.onClick = function()
         local user = usernameInput.text
         local pass = passwordInput.text
@@ -153,16 +157,27 @@ local function showMenu()
     balanceLabel.style.fgColor = colors.lime
     root:addChild(balanceLabel)
     
-    local shopBtn = sgl.Button:new(2, 4, w - 2, 1, "Shop")
+    local shopBtnLabel = sgl.Label:new(2, 4, "[Shop]", w - 2)
+    shopBtnLabel.style.fgColor = colors.lightBlue
+    root:addChild(shopBtnLabel)
+    
+    local shopBtn = sgl.Clickable:new(2, 4, w - 2, 1)
     shopBtn.onClick = function() showShop() end
     root:addChild(shopBtn)
     
-    local transferBtn = sgl.Button:new(2, 6, w - 2, 1, "Transfer")
+    local transferBtnLabel = sgl.Label:new(2, 6, "[Transfer]", w - 2)
+    transferBtnLabel.style.fgColor = colors.lightBlue
+    root:addChild(transferBtnLabel)
+    
+    local transferBtn = sgl.Clickable:new(2, 6, w - 2, 1)
     transferBtn.onClick = function() showTransfer() end
     root:addChild(transferBtn)
     
-    local logoutBtn = sgl.Button:new(2, h - 1, w - 2, 1, "Logout")
-    logoutBtn.style.bgColor = colors.red
+    local logoutBtnLabel = sgl.Label:new(2, h - 1, "[Logout]", w - 2)
+    logoutBtnLabel.style.fgColor = colors.red
+    root:addChild(logoutBtnLabel)
+    
+    local logoutBtn = sgl.Clickable:new(2, h - 1, w - 2, 1)
     logoutBtn.onClick = function()
         sessionToken = nil
         accountNumber = nil
@@ -186,7 +201,11 @@ local function showShop()
     local statusLabel = sgl.Label:new(2, 2, "Loading...", w - 2)
     root:addChild(statusLabel)
     
-    local backBtn = sgl.Button:new(2, h - 1, w - 2, 1, "Back")
+    local backBtnLabel = sgl.Label:new(2, h - 1, "[Back]", w - 2)
+    backBtnLabel.style.fgColor = colors.orange
+    root:addChild(backBtnLabel)
+    
+    local backBtn = sgl.Clickable:new(2, h - 1, w - 2, 1)
     backBtn.onClick = function() showMenu() end
     root:addChild(backBtn)
     
@@ -248,8 +267,11 @@ local function showPurchase(item)
     local qtyInput = sgl.Input:new(2, 7, w - 2, "1")
     root:addChild(qtyInput)
     
-    local buyBtn = sgl.Button:new(2, 9, w - 2, 1, "Buy")
-    buyBtn.style.bgColor = colors.green
+    local buyBtnLabel = sgl.Label:new(2, 9, "[Buy]", w - 2)
+    buyBtnLabel.style.fgColor = colors.green
+    root:addChild(buyBtnLabel)
+    
+    local buyBtn = sgl.Clickable:new(2, 9, w - 2, 1)
     buyBtn.onClick = function()
         local qty = tonumber(qtyInput.text)
         if not qty or qty <= 0 then
@@ -272,7 +294,11 @@ local function showPurchase(item)
     end
     root:addChild(buyBtn)
     
-    local backBtn = sgl.Button:new(2, h - 1, w - 2, 1, "Back")
+    local backBtnLabel2 = sgl.Label:new(2, h - 1, "[Back]", w - 2)
+    backBtnLabel2.style.fgColor = colors.orange
+    root:addChild(backBtnLabel2)
+    
+    local backBtn = sgl.Clickable:new(2, h - 1, w - 2, 1)
     backBtn.onClick = function() showShop() end
     root:addChild(backBtn)
     
@@ -300,8 +326,11 @@ local function showTransfer()
     local amountInput = sgl.Input:new(2, 7, w - 2, "")
     root:addChild(amountInput)
     
-    local sendBtn = sgl.Button:new(2, 9, w - 2, 1, "Send")
-    sendBtn.style.bgColor = colors.green
+    local sendBtnLabel = sgl.Label:new(2, 9, "[Send]", w - 2)
+    sendBtnLabel.style.fgColor = colors.green
+    root:addChild(sendBtnLabel)
+    
+    local sendBtn = sgl.Clickable:new(2, 9, w - 2, 1)
     sendBtn.onClick = function()
         local toUser = toInput.text
         local amount = tonumber(amountInput.text)
@@ -326,7 +355,11 @@ local function showTransfer()
     end
     root:addChild(sendBtn)
     
-    local backBtn = sgl.Button:new(2, h - 1, w - 2, 1, "Back")
+    local backBtnLabel3 = sgl.Label:new(2, h - 1, "[Back]", w - 2)
+    backBtnLabel3.style.fgColor = colors.orange
+    root:addChild(backBtnLabel3)
+    
+    local backBtn = sgl.Clickable:new(2, h - 1, w - 2, 1)
     backBtn.onClick = function() showMenu() end
     root:addChild(backBtn)
     
