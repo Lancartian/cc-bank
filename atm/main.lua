@@ -343,6 +343,7 @@ local btnX = 5
 
 local checkBalanceBtn = sgl.Button:new(btnX, 5, btnWidth, btnHeight, "Check Balance")
 checkBalanceBtn.onClick = function()
+    showScreen("checkBalance")
     -- Fetch latest balance
     local response, err = sendToServer(network.MSG.BALANCE_CHECK, {}, true)
     
@@ -358,36 +359,22 @@ checkBalanceBtn.onClick = function()
         accountDisplayLabel:setText("")
     end
     root:markDirty()
-    showScreen("checkBalance")
 end
 menuScreen:addChild(checkBalanceBtn)
 
 local withdrawBtn = sgl.Button:new(btnX, 8, btnWidth, btnHeight, "Withdraw")
 withdrawBtn.onClick = function()
-    withdrawAmountInput:setText("")
-    withdrawStatusLabel:setText("")
     showScreen("withdraw")
 end
 menuScreen:addChild(withdrawBtn)
 
 local depositBtn = sgl.Button:new(btnX, 11, btnWidth, btnHeight, "Deposit")
 depositBtn.onClick = function()
-    depositAmountInput:setText("")
-    depositStatusLabel:setText("")
     showScreen("deposit")
 end
 menuScreen:addChild(depositBtn)
 
-local transferBtn = sgl.Button:new(btnX, 14, btnWidth, btnHeight, "Transfer")
-transferBtn.onClick = function()
-    transferAccountInput:setText("")
-    transferAmountInput:setText("")
-    transferStatusLabel:setText("")
-    showScreen("transfer")
-end
-menuScreen:addChild(transferBtn)
-
-local logoutBtn = sgl.Button:new(2, 13, 15, 1, "Logout")
+local logoutBtn = sgl.Button:new(2, 14, 15, 1, "Logout")
 logoutBtn.style.bgColor = colors.red
 logoutBtn.onClick = function()
     sessionToken = nil
@@ -397,10 +384,15 @@ logoutBtn.onClick = function()
     usernameInput:setText("")
     passwordInput:setText("")
     loginStatusLabel:setText("")
-    currentScreen = "welcome"
     showScreen("welcome")
 end
 menuScreen:addChild(logoutBtn)
+
+local transferBtn = sgl.Button:new(25, 14, 18, 1, "Transfer")
+transferBtn.onClick = function()
+    showScreen("transfer")
+end
+menuScreen:addChild(transferBtn)
 
 -- Check balance screen
 local checkBalanceScreen = sgl.Panel:new(2, 2, 47, 15)
