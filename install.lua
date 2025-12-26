@@ -1,5 +1,5 @@
 -- install.lua
--- Installer for CC-Bank system
+-- Installer for CC-Bank digital banking system
 
 local REPO_URL = "https://raw.githubusercontent.com/Lancartian/cc-bank/main/"
 local component = nil  -- Will be set by user choice or argument
@@ -10,8 +10,8 @@ if #args > 0 then
     component = args[1]
 end
 
-print("CC-Bank Installer v1.0")
-print("======================")
+print("CC-Bank Digital Banking Installer v2.0")
+print("=======================================")
 print("")
 
 -- Helper function to download file
@@ -49,7 +49,7 @@ if component == nil then
     print("1. All components (recommended for first install)")
     print("2. Server only")
     print("3. Management Console only")
-    print("4. ATM only")
+    print("4. Pocket Computer App only")
     print("")
     write("Enter choice (1-4): ")
     
@@ -62,15 +62,15 @@ if component == nil then
     elseif choice == 3 then
         component = "management"
     elseif choice == 4 then
-        component = "atm"
+        component = "pocket"
     else
         print("Invalid choice!")
         return
     end
-elseif component ~= "all" and component ~= "server" and component ~= "management" and component ~= "atm" then
+elseif component ~= "all" and component ~= "server" and component ~= "management" and component ~= "pocket" then
     -- Invalid argument provided
     print("ERROR: Invalid component '" .. component .. "'")
-    print("Valid options: all, server, management, atm")
+    print("Valid options: all, server, management, pocket")
     return
 end
 
@@ -83,7 +83,7 @@ local dirs = {
     "/lib",
     "/server",
     "/management",
-    "/atm",
+    "/pocket",
     "/data"
 }
 
@@ -112,7 +112,7 @@ local coreFiles = {
 local serverFiles = {
     "server/main.lua",
     "server/accounts.lua",
-    "server/currency.lua",
+    "server/catalog.lua",
     "server/transactions.lua",
     "server/network_storage.lua"
 }
@@ -121,8 +121,8 @@ local managementFiles = {
     "management/main.lua"
 }
 
-local atmFiles = {
-    "atm/main.lua"
+local pocketFiles = {
+    "pocket/main.lua"
 }
 
 -- Download core files
@@ -157,10 +157,10 @@ if component == "all" or component == "management" then
     end
 end
 
-if component == "all" or component == "atm" then
+if component == "all" or component == "pocket" then
     print("")
-    print("Installing ATM component...")
-    for _, file in ipairs(atmFiles) do
+    print("Installing pocket computer app...")
+    for _, file in ipairs(pocketFiles) do
         if not downloadFile(REPO_URL .. file, file) then
             print("Installation failed!")
             return
@@ -181,9 +181,10 @@ if component == "all" then
     print("Next steps:")
     print("1. Edit config.lua to configure settings")
     print("2. Attach wireless modems to all computers")
-    print("3. On server: Run 'server/main'")
-    print("4. On management: Run 'management/main'")
-    print("5. On ATM: Configure and run 'atm/main'")
+    print("3. Set up STORAGE, INPUT, and void chests (see README)")
+    print("4. On server: Run 'server/main'")
+    print("5. On management: Run 'management/main'")
+    print("6. On pocket computers: Run 'pocket/main'")
     print("")
 elseif component == "server" then
     print("Server Installation Complete!")
@@ -191,9 +192,11 @@ elseif component == "server" then
     print("Next steps:")
     print("1. Edit config.lua to configure server settings")
     print("2. Attach a wireless modem")
-    print("3. Attach a chest for currency (default: bottom)")
-    print("4. Set up void chests with unique frequencies")
-    print("5. Run: server/main")
+    print("3. Set up peripheral network with wired modems:")
+    print("   - STORAGE chests (label with 'STORAGE' paper)")
+    print("   - INPUT chests (label with 'INPUT' paper)")
+    print("   - User void chests (label with username papers)")
+    print("4. Run: server/main")
     print("")
 elseif component == "management" then
     print("Management Console Installation Complete!")
@@ -203,20 +206,16 @@ elseif component == "management" then
     print("2. Attach a wireless modem")
     print("3. Run: management/main")
     print("4. Create master password on first run")
-    print("5. Authorize ATMs and create user accounts")
+    print("5. Manage accounts and shop items")
     print("")
-elseif component == "atm" then
-    print("ATM Installation Complete!")
+elseif component == "pocket" then
+    print("Pocket Computer App Installation Complete!")
     print("")
     print("Next steps:")
-    print("1. Get authorization token from management console")
-    print("2. Edit config.lua:")
-    print("   - Set config.atm.id")
-    print("   - Set config.atm.frequency")
-    print("   - Set config.atm.authToken")
-    print("3. Attach a wireless modem")
-    print("4. Set up void chest with matching frequency")
-    print("5. Run: atm/main")
+    print("1. Attach a wireless modem")
+    print("2. Run: pocket/main")
+    print("3. Login with your account")
+    print("4. Access balance, transfers, and shop")
     print("")
 end
 
