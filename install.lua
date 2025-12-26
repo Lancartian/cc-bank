@@ -237,13 +237,15 @@ print("")
 
 -- Core files (always needed)
 local coreFiles = {
-    "config.lua",
     "startup.lua",
     "lib/crypto.lua",
     "lib/network.lua",
     "lib/logger.lua",
     "lib/utils.lua"
 }
+
+-- Config file (only download on fresh install, not updates)
+local configFile = "config.lua"
 
 -- Component-specific files
 local serverFiles = {
@@ -261,6 +263,18 @@ local managementFiles = {
 local pocketFiles = {
     "pocket/main.lua"
 }
+
+-- Download config file (only on fresh install)
+if not isUpdate then
+    print("Installing configuration file...")
+    if not downloadFile(REPO_URL .. configFile, configFile) then
+        print("Installation failed!")
+        return
+    end
+else
+    print("Skipping config.lua (preserving your settings)")
+    print("")
+end
 
 -- Download core files
 print("Installing core libraries...")
@@ -327,17 +341,27 @@ print("")
 if isUpdate then
     print("Update successful! Changes:")
     print("- Updated all program files to latest version")
-    print("- Preserved your data (accounts, transactions, config)")
+    print("- Preserved your data (accounts, transactions)")
+    print("- Preserved your config.lua settings")
+    print("")
+    print("IMPORTANT: Check for new config options!")
+    print("Compare your config.lua with the latest version:")
+    print("  " .. REPO_URL .. "config.lua")
+    print("")
+    print("You may need to manually add new settings like:")
+    print("  - config.pocket (if missing)")
+    print("  - New security options")
+    print("  - New feature toggles")
     print("")
     print("Next steps:")
-    print("1. Restart the server and any running components")
-    print("2. Check for any new config options in config.lua")
+    print("1. Review and update config.lua if needed")
+    print("2. Restart the server and any running components")
     print("3. Test all functionality to ensure compatibility")
     print("")
     print("If you experience issues:")
     print("- Check the changelog for breaking changes")
     print("- Verify your config.lua has all required settings")
-    print("- Your data backup was saved during update")
+    print("- Compare against the default config.lua template")
     print("")
 elseif component == "all" then
     print("All components installed successfully!")
