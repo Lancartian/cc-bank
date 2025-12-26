@@ -520,7 +520,7 @@ local depositTitleLabel = sgl.Label:new(2, 1, "Deposit Currency", 43)
 depositTitleLabel.style.fgColor = colors.yellow
 depositScreen:addChild(depositTitleLabel)
 
-local depositInfoLabel = sgl.Label:new(2, 3, "Place signed books in deposit chest", 43)
+local depositInfoLabel = sgl.Label:new(2, 3, "Place books in scan chest, then click Scan", 43)
 depositScreen:addChild(depositInfoLabel)
 
 local depositScannedLabel = sgl.Label:new(2, 5, "Scanned: 0 Credits", 43)
@@ -530,6 +530,48 @@ depositScreen:addChild(depositScannedLabel)
 local depositStatusLabel = sgl.Label:new(2, 7, "", 43)
 depositScreen:addChild(depositStatusLabel)
 
+-- Find scan chest (directly attached inventory)
+local function findScanChest()
+    local sides = {"left", "right", "top", "bottom", "front", "back"}
+    for _, side in ipairs(sides) do
+        if peripheral.hasType(side, "inventory") then
+            return peripheral.wrap(side)
+        end
+    end
+    return nil
+end
+
+-- Scan books from local chest and extract NBT data
+local function scanLocalChest()
+    local scanChest = findScanChest()
+    if not scanChest then
+        return nil, "No scan chest found"
+    end
+    
+    local books = {}
+    local items = scanChest.list()
+    
+    for slot, item in pairs(items) do
+        -- Check if it's a signed book
+        if string.find(item.name, "written_book") then
+            local detail = scanChest.getItemDetail(slot)
+            if detail and detail.nbt then
+                -- Extract NBT fields
+                local nbt = detail.nbt
+                table.insert(books, {
+                    title = nbt.title or "",
+                    author = nbt.author or "",
+                    pages = nbt.pages or {},
+                    generation = nbt.generation or 0,
+                    slot = slot
+                })
+            end
+        end
+    end
+    
+    return books, nil
+end
+
 local scanBtn = sgl.Button:new(3, 9, 20, 2, "Scan Currency")
 scanBtn.onClick = function()
     depositStatusLabel:setText("Scanning...")
@@ -537,16 +579,36 @@ scanBtn.onClick = function()
     depositScannedLabel:setText("Scanned: 0 Credits")
     root:markDirty()
     
-    -- Request server to verify currency in deposit chest
+    -- Scan local chest for books
+    local books, err = scanLocalChest()
+    if not books then
+        depositScannedLabel:setText("Scanned: 0 Credits")
+        depositScannedLabel.style.fgColor = colors.red
+        depositStatusLabel:setText("Error: " .. tostring(err))
+        depositStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    if #books == 0 then
+        depositScannedLabel:setText("Scanned: 0 Credits")
+        depositScannedLabel.style.fgColor = colors.yellow
+        depositStatusLabel:setText("No signed books found")
+        depositStatusLabel.style.fgColor = colors.yellow
+        root:markDirty()
+        return
+    end
+    
+    -- Send NBT data to server for verification and registration
     local response, err = sendToServer(network.MSG.CURRENCY_VERIFY, {
-        atmID = atmID,
-        action = "scan_deposit"
+        books = books,
+        action = "register_deposit"
     }, true)
     
     if response and response.validAmount then
         depositScannedLabel:setText("Scanned: " .. response.validAmount .. " Credits")
         depositScannedLabel.style.fgColor = colors.green
-        depositStatusLabel:setText(response.bookCount .. " books verified")
+        depositStatusLabel:setText(response.bookCount .. " books verified - put in void chest")
         depositStatusLabel.style.fgColor = colors.green
     else
         depositScannedLabel:setText("Scanned: 0 Credits")
@@ -558,29 +620,33 @@ scanBtn.onClick = function()
 end
 depositScreen:addChild(scanBtn)
 
-local depositConfirmBtn = sgl.Button:new(25, 9, 20, 2, "Complete Deposit")
-depositConfirmBtn.style.bgColor = colors.green
+local depositConfirmBtn = sgl.Button:new(25, 9, 20, 2, "Check Status")
+depositConfirmBtn.style.bgColor = colors.blue
 depositConfirmBtn.onClick = function()
-    depositStatusLabel:setText("Processing...")
+    depositStatusLabel:setText("Checking...")
     depositStatusLabel.style.fgColor = colors.white
     root:markDirty()
     
-    -- Complete the deposit
+    -- Check if deposit has been processed
     local response, err = sendToServer(network.MSG.DEPOSIT, {
-        atmID = atmID
+        action = "check_status"
     }, true)
     
-    if response then
+    if response and response.newBalance then
         balance = response.newBalance
-        depositStatusLabel:setText("Deposit successful!")
+        depositStatusLabel:setText("Deposit complete! Books processed: " .. (response.processed or 0))
         depositStatusLabel.style.fgColor = colors.green
         depositScannedLabel:setText("Scanned: 0 Credits")
         updateMenuLabels()
         root:markDirty()
         sleep(2)
         showScreen("menu")
+    elseif response and response.pending then
+        depositStatusLabel:setText("Pending: " .. response.pending .. " books not yet arrived")
+        depositStatusLabel.style.fgColor = colors.yellow
+        root:markDirty()
     else
-        depositStatusLabel:setText("Deposit failed: " .. tostring(err))
+        depositStatusLabel:setText("Error: " .. tostring(err or "Unknown"))
         depositStatusLabel.style.fgColor = colors.red
         root:markDirty()
     end

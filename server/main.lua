@@ -88,6 +88,7 @@ local atmRegistry = {}  -- atmID -> {lastPing, online, authorized, computerID}
 local messageNonces = {}  -- Track nonces to prevent replay attacks
 local managementSessions = {}  -- token -> {created, lastActivity, computerID}
 local loginAttempts = {}  -- Track login attempts by sender for rate limiting
+local depositRegistry = {}  -- nbtHash -> {username, accountNumber, timestamp}
 
 -- Initialize modem
 local modem = network.init(config.server.port)
@@ -448,76 +449,58 @@ handlers[network.MSG.DEPOSIT] = function(message, sender)
         return network.errorResponse("session_error", err)
     end
     
-    local atmID = message.data.atmID
+    local action = message.data.action
     
-    -- Get pending deposit from previous scan
-    if not session.pendingDeposit or not session.pendingDeposit[atmID] then
-        return network.errorResponse("no_scan", "Please scan currency first")
-    end
-    
-    local pendingDeposit = session.pendingDeposit[atmID]
-    
-    -- Check if scan is recent (within 5 minutes)
-    local now = os.epoch("utc")
-    if now - pendingDeposit.timestamp > 300000 then
-        session.pendingDeposit[atmID] = nil
-        return network.errorResponse("scan_expired", "Scan expired, please scan again")
-    end
-    
-    local amount = pendingDeposit.validAmount
-    
-    if not amount or amount <= 0 then
-        return network.errorResponse("invalid_amount", "No valid currency to deposit")
-    end
-    
-    -- Update account balance
-    local success, err = accounts.updateBalance(session.accountNumber, amount)
-    if not success then
-        return network.errorResponse("balance_update_error", err)
-    end
-    
-    -- Move books from deposit chest to collection chest
-    local depositChest = networkStorage.getDepositChest(atmID)
-    local collectionChest = networkStorage.getCollectionChest()
-    
-    if depositChest and collectionChest then
-        local movedCount = 0
-        for _, book in ipairs(pendingDeposit.verifiedBooks) do
-            local moved = depositChest.peripheral.pushItems(collectionChest.name, book.slot)
-            if moved and moved > 0 then
-                movedCount = movedCount + 1
+    if action == "check_status" then
+        -- Check how many registered books have been processed
+        local processed = 0
+        local pending = 0
+        local totalValue = 0
+        
+        for nbtHash, regData in pairs(depositRegistry) do
+            if regData.username == session.username then
+                if regData.processed then
+                    processed = processed + 1
+                    totalValue = totalValue + (regData.value or 0)
+                else
+                    pending = pending + 1
+                end
             end
         end
-        print("Deposit: Moved " .. movedCount .. "/" .. pendingDeposit.bookCount .. " books to collection")
+        
+        if processed > 0 then
+            -- Update account with processed deposits
+            local success, err = accounts.updateBalance(session.accountNumber, totalValue)
+            if not success then
+                return network.errorResponse("balance_update_error", err)
+            end
+            
+            -- Log transaction
+            local txID = transactions.deposit(session.accountNumber, totalValue, 0)
+            
+            -- Clear processed entries
+            for nbtHash, regData in pairs(depositRegistry) do
+                if regData.username == session.username and regData.processed then
+                    depositRegistry[nbtHash] = nil
+                end
+            end
+            
+            return network.successResponse({
+                transactionID = txID,
+                newBalance = accounts.getBalance(session.accountNumber),
+                processed = processed
+            })
+        elseif pending > 0 then
+            return network.successResponse({
+                pending = pending
+            })
+        else
+            return network.errorResponse("no_deposits", "No deposits found")
+        end
+    else
+        return network.errorResponse("invalid_action", "Invalid action")
     end
-    
-    -- Clear pending deposit
-    session.pendingDeposit[atmID] = nil
-    
-    -- Log transaction
-    local txID = transactions.deposit(session.accountNumber, amount, atmID)
-    
-    return network.successResponse({
-        transactionID = txID,
-        amount = amount,
-        newBalance = accounts.getBalance(session.accountNumber)
-    })
-end
-    if not success then
-        return network.errorResponse("balance_update_error", err)
-    end
-    
-    -- Log transaction
-    local txID = transactions.deposit(session.accountNumber, amount, atmID)
-    
-    return network.successResponse({
-        transactionID = txID,
-        amount = amount,
-        newBalance = accounts.getBalance(session.accountNumber)
-    })
-end
-
--- Transfer
+end-- Transfer
 handlers[network.MSG.TRANSFER] = function(message, sender)
     -- Check nonce
     local nonceValid, nonceErr = checkNonce(message.nonce, message.timestamp)
@@ -679,64 +662,46 @@ handlers[network.MSG.CURRENCY_VERIFY] = function(message, sender)
         return network.errorResponse("session_error", err)
     end
     
-    local atmID = message.data.atmID
     local action = message.data.action
     
-    if action == "scan_deposit" then
-        -- Scan deposit chest and verify all books
-        local depositChest = networkStorage.getDepositChest(atmID)
-        if not depositChest then
-            return network.errorResponse("no_deposit_chest", "Deposit chest not found for ATM #" .. atmID)
-        end
+    if action == "register_deposit" then
+        -- Register books from ATM-side scan
+        local books = message.data.books
         
-        local chest = depositChest.peripheral
-        local items = chest.list()
+        if not books or type(books) ~= "table" or #books == 0 then
+            return network.errorResponse("no_books", "No books provided")
+        end
         
         local validAmount = 0
         local bookCount = 0
-        local verifiedBooks = {}
         
-        for slot, item in pairs(items) do
-            -- Only process books
-            if string.find(item.name, "written_book") then
-                local detail = chest.getItemDetail(slot)
-                if detail then
-                    -- Compute NBT hash
-                    local nbtData = {
-                        title = detail.displayName or "",
-                        author = detail.author or "",
-                        pages = detail.pages or {},
-                        generation = detail.generation or 0
-                    }
-                    local nbtString = textutils.serialiseJSON(nbtData)
-                    local nbtHash = crypto.sha256(nbtString)
-                    
-                    -- Verify against currency registry
-                    local record = currency.verify(nbtHash)
-                    if record then
-                        validAmount = validAmount + record.value
-                        bookCount = bookCount + 1
-                        table.insert(verifiedBooks, {
-                            slot = slot,
-                            hash = nbtHash,
-                            value = record.value,
-                            denomination = record.denomination
-                        })
-                    end
-                end
+        for _, book in ipairs(books) do
+            -- Compute NBT hash from ATM-provided data
+            local nbtData = {
+                title = book.title or "",
+                author = book.author or "",
+                pages = book.pages or {},
+                generation = book.generation or 0
+            }
+            local nbtString = textutils.serialiseJSON(nbtData)
+            local nbtHash = crypto.sha256(nbtString)
+            
+            -- Verify against currency registry
+            local record = currency.verify(nbtHash)
+            if record then
+                validAmount = validAmount + record.value
+                bookCount = bookCount + 1
+                
+                -- Register this hash as belonging to this user
+                depositRegistry[nbtHash] = {
+                    username = session.username,
+                    accountNumber = session.accountNumber,
+                    timestamp = os.epoch("utc"),
+                    value = record.value,
+                    denomination = record.denomination
+                }
             end
         end
-        
-        -- Store verification results for this session
-        if not sessions[message.token].pendingDeposit then
-            sessions[message.token].pendingDeposit = {}
-        end
-        sessions[message.token].pendingDeposit[atmID] = {
-            validAmount = validAmount,
-            bookCount = bookCount,
-            verifiedBooks = verifiedBooks,
-            timestamp = os.epoch("utc")
-        }
         
         return network.successResponse({
             validAmount = validAmount,
@@ -881,6 +846,74 @@ local function dispenseToATM(atmID, amount)
     return true, nil
 end
 
+-- Auxiliary chest processor - processes books arriving from deposit void chests
+local function auxiliaryChestProcessor()
+    while true do
+        local auxiliaryChest = networkStorage.getAuxiliaryChest()
+        
+        if auxiliaryChest then
+            local chest = auxiliaryChest.peripheral
+            local items = chest.list()
+            
+            for slot, item in pairs(items) do
+                -- Skip marker slot
+                if slot ~= auxiliaryChest.markerSlot then
+                    -- Only process books
+                    if string.find(item.name, "written_book") then
+                        local detail = chest.getItemDetail(slot)
+                        if detail and detail.nbt then
+                            -- Compute NBT hash
+                            local nbtData = {
+                                title = detail.nbt.title or "",
+                                author = detail.nbt.author or "",
+                                pages = detail.nbt.pages or {},
+                                generation = detail.nbt.generation or 0
+                            }
+                            local nbtString = textutils.serialiseJSON(nbtData)
+                            local nbtHash = crypto.sha256(nbtString)
+                            
+                            -- Check if this book is registered to any user
+                            local regData = depositRegistry[nbtHash]
+                            if regData then
+                                -- Mark as processed
+                                regData.processed = true
+                                
+                                -- Find denomination chest and move book there
+                                local denomination = regData.denomination
+                                local denominationChests = networkStorage.getDenominationChests(denomination)
+                                
+                                if denominationChests and #denominationChests > 0 then
+                                    local moved = false
+                                    for _, destChest in ipairs(denominationChests) do
+                                        local pushed = chest.pushItems(destChest.name, slot)
+                                        if pushed and pushed > 0 then
+                                            print("Deposited $" .. denomination .. " book for " .. regData.username)
+                                            moved = true
+                                            break
+                                        end
+                                    end
+                                    
+                                    if not moved then
+                                        print("WARNING: Could not move book to denomination chest (full?)")
+                                    end
+                                else
+                                    print("WARNING: No denomination chest for $" .. denomination)
+                                end
+                            else
+                                -- Unregistered book - could be invalid or from other system
+                                print("WARNING: Unregistered book in auxiliary chest (hash: " .. nbtHash:sub(1, 8) .. "...)")
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        
+        -- Check every 5 seconds
+        sleep(5)
+    end
+end
+
 -- Main server loop
 local function serverLoop()
     while true do
@@ -963,4 +996,4 @@ end
 
 -- Start server
 print("\n=== Server started ===\n")
-serverLoop()
+parallel.waitForAny(serverLoop, auxiliaryChestProcessor)
