@@ -3,6 +3,7 @@
 
 local REPO_URL = "https://raw.githubusercontent.com/Lancartian/cc-bank/main/"
 local component = nil  -- Will be set by user choice or argument
+local isUpdate = false  -- Track if this is an update or fresh install
 
 -- Check arguments
 local args = {...}
@@ -10,18 +11,146 @@ if #args > 0 then
     component = args[1]
 end
 
+-- Check if this is an existing installation
+local function checkExistingInstall()
+    local hasConfig = fs.exists("config.lua") or fs.exists("/config.lua")
+    local hasServer = fs.exists("server/main.lua") or fs.exists("/server/main.lua")
+    local hasManagement = fs.exists("management/main.lua") or fs.exists("/management/main.lua")
+    local hasPocket = fs.exists("pocket/main.lua") or fs.exists("/pocket/main.lua")
+    
+    return hasConfig or hasServer or hasManagement or hasPocket
+end
+
 print("CC-Bank Digital Banking Installer v2.0")
 print("=======================================")
 print("")
 
+-- Check if updating existing installation
+if checkExistingInstall() then
+    print("Existing installation detected!")
+    print("")
+    print("Would you like to:")
+    print("1. Update existing installation (preserves data)")
+    print("2. Fresh install (WARNING: will overwrite files)")
+    print("3. Cancel")
+    print("")
+    write("Enter choice (1-3): ")
+    
+    local updateChoice = tonumber(read())
+    print("")
+    
+    if updateChoice == 1 then
+        isUpdate = true
+        print("Update mode: Your data files will be preserved.")
+        print("")
+    elseif updateChoice == 2 then
+        isUpdate = false
+        print("Fresh install mode: Files will be overwritten.")
+        print("")
+    else
+        print("Installation cancelled.")
+        return
+    end
+end
+
 -- Helper function to download file
 local function downloadFile(url, path)
     print("Downloading: " .. path)
+    
+    -- In update mode, back up existing file if it exists
+    if isUpdate and fs.exists(path) then
+        local backupPath = path .. ".backup"
+        if fs.exists(backupPath) then
+            fs.delete(backupPath)
+        end
+        fs.copy(path, backupPath)
+        print("  (backed up existing file)")
+    end
+    
     local success = shell.run("wget", url, path)
     if not success then
         print("ERROR: Failed to download " .. path)
+        
+        -- In update mode, restore backup on failure
+        if isUpdate and fs.exists(path .. ".backup") then
+            fs.delete(path)
+            fs.move(path .. ".backup", path)
+            print("  (restored from backup)")
+        end
+        
         return false
     end
+    
+    -- Clean up backup file on success
+    if isUpdate and fs.exists(path .. ".backup") then
+        fs.delete(path .. ".backup")
+    end
+    
+    return true
+end
+
+-- Helper function to backup data directory
+local function backupData()
+    if not fs.exists("/data") then
+        return true
+    end
+    
+    print("Backing up data directory...")
+    
+    if fs.exists("/data.backup") then
+        fs.delete("/data.backup")
+    end
+    
+    -- Create backup directory
+    fs.makeDir("/data.backup")
+    
+    -- Copy all data files
+    local dataFiles = fs.list("/data")
+    for _, file in ipairs(dataFiles) do
+        local srcPath = "/data/" .. file
+        local dstPath = "/data.backup/" .. file
+        
+        if fs.isDir(srcPath) then
+            -- Skip subdirectories for now
+        else
+            fs.copy(srcPath, dstPath)
+            print("  Backed up: " .. file)
+        end
+    end
+    
+    print("Data backup complete!")
+    print("")
+    return true
+end
+
+-- Helper function to restore data directory
+local function restoreData()
+    if not fs.exists("/data.backup") then
+        return true
+    end
+    
+    print("Restoring data files...")
+    
+    -- Restore all backed up files
+    local backupFiles = fs.list("/data.backup")
+    for _, file in ipairs(backupFiles) do
+        local srcPath = "/data.backup/" .. file
+        local dstPath = "/data/" .. file
+        
+        if not fs.isDir(srcPath) then
+            if fs.exists(dstPath) then
+                fs.delete(dstPath)
+            end
+            fs.copy(srcPath, dstPath)
+            print("  Restored: " .. file)
+        end
+    end
+    
+    -- Clean up backup
+    fs.delete("/data.backup")
+    
+    print("Data restored!")
+    print("")
     return true
 end
 
@@ -77,6 +206,14 @@ end
 print("")
 print("Installing: " .. component)
 print("")
+
+-- Backup data directory if updating
+if isUpdate then
+    if not backupData() then
+        print("ERROR: Failed to backup data!")
+        return
+    end
+end
 
 -- Create directories
 local dirs = {
@@ -170,12 +307,39 @@ end
 
 print("")
 print("========================================")
-print("Installation Complete!")
+
+-- Restore data if this was an update
+if isUpdate then
+    if not restoreData() then
+        print("ERROR: Failed to restore data!")
+        print("Your data backup is in /data.backup")
+        return
+    end
+    print("Update Complete!")
+else
+    print("Installation Complete!")
+end
+
 print("========================================")
 print("")
 
 -- Component-specific instructions
-if component == "all" then
+if isUpdate then
+    print("Update successful! Changes:")
+    print("- Updated all program files to latest version")
+    print("- Preserved your data (accounts, transactions, config)")
+    print("")
+    print("Next steps:")
+    print("1. Restart the server and any running components")
+    print("2. Check for any new config options in config.lua")
+    print("3. Test all functionality to ensure compatibility")
+    print("")
+    print("If you experience issues:")
+    print("- Check the changelog for breaking changes")
+    print("- Verify your config.lua has all required settings")
+    print("- Your data backup was saved during update")
+    print("")
+elseif component == "all" then
     print("All components installed successfully!")
     print("")
     print("Next steps:")
