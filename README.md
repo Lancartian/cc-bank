@@ -384,6 +384,8 @@ CC-Bank uses **signed books (written_book)** as currency for built-in forgery pr
 
 1. **Prepare Signed Books**:
    - Have a worker (player) create books and sign them
+   - **IMPORTANT: Read each book after signing it** - the NBT hash changes after the first read
+   - Books that haven't been read will not match their hash during scanning
    - **Name each book with its denomination value** (e.g., "1 Token", "5 Credits", "100 Notes")
    - The system extracts the first number from the book's display name
    - Examples: "5 Credits", "10 Dollar Bill", "100", "my 50 note" all work
