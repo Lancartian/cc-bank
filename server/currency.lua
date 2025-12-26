@@ -71,6 +71,10 @@ function currency.mintAndSort()
             local nbtHash = item.nbt
             local currencyID = config.currency.nbtPrefix .. nbtHash
             
+            print("[MINT] Processing book: " .. tostring(item.displayName))
+            print("[MINT] NBT Hash: " .. tostring(nbtHash))
+            print("[MINT] Currency ID: " .. tostring(currencyID))
+            
             -- Register in database if not already registered
             local itemValue = item.count * denomination
             
@@ -84,6 +88,7 @@ function currency.mintAndSort()
                     minted = os.epoch("utc"),
                     valid = true
                 }
+                print("[MINT] Registered new currency in database")
                 
                 -- Track for sorting
                 if not mintedByDenom[denomination] then
