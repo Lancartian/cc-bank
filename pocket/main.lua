@@ -92,15 +92,28 @@ local function showLogin()
     passwordInput.masked = true
     root:addChild(passwordInput)
     
+    -- Status/error label
+    local statusLabel = sgl.Label:new(2, 14, "", w - 2)
+    statusLabel.style.fgColor = colors.red
+    root:addChild(statusLabel)
+    
     local loginBtn = sgl.Button:new(2, 10, w - 2, 3, "Login")
     loginBtn.onClick = function()
         local user = usernameInput.text
         local pass = passwordInput.text
         
+        statusLabel.text = ""
+        root:markDirty()
+        
         if user == "" or pass == "" then
-            showError("Enter username and password")
+            statusLabel.text = "Enter username and password"
+            root:markDirty()
             return
         end
+        
+        statusLabel.text = "Authenticating..."
+        statusLabel.style.fgColor = colors.yellow
+        root:markDirty()
         
         local passwordHash = crypto.sha256(pass)
         local response, err = sendToServer(network.MSG.AUTH_REQUEST, {
@@ -119,15 +132,41 @@ local function showLogin()
                     accountNumber = authData.accountNumber
                     username = user
                     balance = authData.balance or 0
+                    statusLabel.text = "Success!"
+                    statusLabel.style.fgColor = colors.green
+                    root:markDirty()
+                    sleep(0.5)
                     showMenu()
                 else
-                    showError("Authentication failed")
+                    statusLabel.text = "Authentication failed"
+                    statusLabel.style.fgColor = colors.red
+                    root:markDirty()
                 end
             else
-                showError("Invalid response")
+                statusLabel.text = "Invalid response from server"
+                statusLabel.style.fgColor = colors.red
+                root:markDirty()
             end
+        elseif response and response.type == network.MSG.ERROR then
+            -- Handle error response from server
+            local errorMsg = "Login failed"
+            if response.data and response.data.message then
+                errorMsg = response.data.message
+            end
+            statusLabel.text = errorMsg
+            statusLabel.style.fgColor = colors.red
+            root:markDirty()
         else
-            showError(err or "Login failed")
+            -- Network or timeout error
+            local errorMsg = "Connection failed"
+            if err == "timeout" then
+                errorMsg = "Server timeout - check connection"
+            elseif err then
+                errorMsg = "Error: " .. err
+            end
+            statusLabel.text = errorMsg
+            statusLabel.style.fgColor = colors.red
+            root:markDirty()
         end
     end
     root:addChild(loginBtn)
