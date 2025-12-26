@@ -56,18 +56,29 @@ end
 -- Helper function to download file
 local function downloadFile(url, path)
     print("Downloading: " .. path)
+    print("  From: " .. url)
     
     -- Always delete existing file first
     if fs.exists(path) then
+        print("  Deleting old file...")
         fs.delete(path)
     end
     
+    print("  Running wget...")
     local success = shell.run("wget", url, path)
+    
     if not success then
-        print("ERROR: Failed to download " .. path)
+        print("ERROR: wget command failed!")
         return false
     end
     
+    -- Check if file was actually created
+    if not fs.exists(path) then
+        print("ERROR: File was not created: " .. path)
+        return false
+    end
+    
+    print("  Success!")
     return true
 end
 
