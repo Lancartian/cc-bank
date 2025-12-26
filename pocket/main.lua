@@ -105,7 +105,7 @@ local function showLogin()
         local passwordHash = crypto.sha256(pass)
         local response, err = sendToServer(network.MSG.AUTH_REQUEST, {
             username = user,
-            passwordHash = passwordHash
+            password = passwordHash
         }, true)
         
         if response and response.type == network.MSG.AUTH_RESPONSE then
@@ -114,10 +114,11 @@ local function showLogin()
                 local decryptedData = crypto.decrypt(decrypted, encryptionKey)
                 local authData = textutils.unserialiseJSON(decryptedData)
                 
-                if authData and authData.sessionToken then
-                    sessionToken = authData.sessionToken
+                if authData and authData.token then
+                    sessionToken = authData.token
                     accountNumber = authData.accountNumber
                     username = user
+                    balance = authData.balance or 0
                     showMenu()
                 else
                     showError("Authentication failed")
