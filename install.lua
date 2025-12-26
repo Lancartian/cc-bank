@@ -258,6 +258,7 @@ local pocketFiles = {
 }
 
 -- Download config file (only on fresh install)
+print("DEBUG: isUpdate = " .. tostring(isUpdate))
 if not isUpdate then
     print("Installing configuration file...")
     if not downloadFile(REPO_URL .. configFile, configFile) then
@@ -270,13 +271,16 @@ else
 end
 
 -- Download core files
+print("DEBUG: Core files count = " .. #coreFiles)
 print("Installing core libraries...")
 for _, file in ipairs(coreFiles) do
+    print("DEBUG: Processing core file: " .. file)
     if not downloadFile(REPO_URL .. file, file) then
         print("Installation failed!")
         return
     end
 end
+print("DEBUG: Core files complete")
 
 -- Download component-specific files
 if component == "all" or component == "server" then
@@ -303,8 +307,11 @@ end
 
 if component == "all" or component == "pocket" then
     print("")
+    print("DEBUG: Installing pocket component...")
+    print("DEBUG: Pocket files count = " .. #pocketFiles)
     print("Installing pocket computer app...")
     for _, file in ipairs(pocketFiles) do
+        print("DEBUG: Processing pocket file: " .. file)
         if not downloadFile(REPO_URL .. file, file) then
             print("Installation failed!")
             return
