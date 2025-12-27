@@ -886,10 +886,12 @@ local function serverLoop()
                        message.type == network.MSG.ACCOUNT_LIST or
                        message.type == network.MSG.ACCOUNT_DELETE or
                        message.type == network.MSG.ACCOUNT_UNLOCK or
+                       message.type == network.MSG.ACCOUNT_RESET_PASSWORD or
                        message.type == network.MSG.SHOP_MANAGE or
                        message.type == network.MSG.SHOP_SET_PRICE or
                        message.type == network.MSG.SHOP_RENAME_ITEM or
-                       message.type == network.MSG.SHOP_RESCAN then
+                       message.type == network.MSG.SHOP_RESCAN or
+                       message.type == network.MSG.SHOP_GET_CATALOG then
                         responsePort = config.management.port
                     -- Pocket/Shop messages get responses on their respective ports  
                     elseif message.type == network.MSG.PING or
@@ -897,8 +899,7 @@ local function serverLoop()
                            message.type == network.MSG.BALANCE_CHECK or
                            message.type == network.MSG.TRANSFER or
                            message.type == network.MSG.SHOP_BROWSE or
-                           message.type == network.MSG.SHOP_PURCHASE or
-                           message.type == network.MSG.SHOP_GET_CATALOG then
+                           message.type == network.MSG.SHOP_PURCHASE then
                         responsePort = config.pocket.port or config.server.port
                     end
                     
