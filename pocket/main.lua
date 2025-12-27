@@ -54,6 +54,9 @@ local function sendToServer(msgType, data, waitForResponse)
     return true, nil
 end
 
+-- Forward declarations for screen functions
+local showLogin, showMenu, showShop, showPurchase, showTransfer
+
 local function clearScreen()
     -- Remove all children from root panel
     while root.children and #root.children > 0 do
@@ -71,7 +74,7 @@ local function showError(message)
 end
 
 -- Login Screen
-local function showLogin()
+showLogin = function()
     clearScreen()
     currentScreen = "login"
     
@@ -236,7 +239,7 @@ local function showLogin()
 end
 
 -- Main Menu Screen
-local function showMenu()
+showMenu = function()
     local f = fs.open("/showmenu_debug.txt", "w")
     if f then
         f.writeLine("showMenu() started")
@@ -309,7 +312,7 @@ local function showMenu()
 end
 
 -- Shop Screen
-local function showShop()
+showShop = function()
     clearScreen()
     currentScreen = "shop"
     
@@ -362,7 +365,7 @@ local function showShop()
 end
 
 -- Purchase Screen
-local function showPurchase(item)
+showPurchase = function(item)
     clearScreen()
     currentScreen = "purchase"
     
@@ -414,7 +417,7 @@ local function showPurchase(item)
 end
 
 -- Transfer Screen
-local function showTransfer()
+showTransfer = function()
     clearScreen()
     currentScreen = "transfer"
     
