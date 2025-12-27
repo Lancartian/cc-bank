@@ -98,6 +98,8 @@ function catalog.rescan()
     
     isScanning = true
     print("[SHOP CATALOG] Starting rescan...")
+    -- Preserve existing catalog prices and custom display names
+    local oldCatalog = itemCatalog
     itemCatalog = {}
     local storage = getNetworkStorage()
     
@@ -141,13 +143,15 @@ function catalog.rescan()
                         if not shouldSkip then
                             -- Initialize item entry if needed
                             if not itemCatalog[item.name] then
-                                itemCatalog[item.name] = {
-                                    name = item.name,
-                                    displayName = nil,
-                                    totalStock = 0,
-                                    price = 0,  -- Default price, can be set by management console
-                                    locations = {}
-                                }
+                                    -- Carry over price/displayName from previous catalog if present
+                                    local prev = oldCatalog and oldCatalog[item.name]
+                                    itemCatalog[item.name] = {
+                                        name = item.name,
+                                        displayName = (prev and prev.displayName) or nil,
+                                        totalStock = 0,
+                                        price = (prev and prev.price) or 0,
+                                        locations = {}
+                                    }
                             end
                             
                             -- Add to total stock
