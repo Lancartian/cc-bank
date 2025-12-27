@@ -237,12 +237,39 @@ end
 
 -- Main Menu Screen
 local function showMenu()
+    local f = fs.open("/showmenu_debug.txt", "w")
+    if f then
+        f.writeLine("showMenu() started")
+        f.close()
+    end
+    
     clearScreen()
+    
+    f = fs.open("/showmenu_debug.txt", "a")
+    if f then
+        f.writeLine("clearScreen() completed")
+        f.close()
+    end
+    
     currentScreen = "menu"
+    
+    f = fs.open("/showmenu_debug.txt", "a")
+    if f then
+        f.writeLine("Creating title label...")
+        f.writeLine("username: " .. tostring(username))
+        f.close()
+    end
     
     local title = sgl.Label:new(2, 1, username, w - 2)
     title.style.fgColor = colors.yellow
     root:addChild(title)
+    
+    f = fs.open("/showmenu_debug.txt", "a")
+    if f then
+        f.writeLine("Title added, creating balance label...")
+        f.writeLine("balance: " .. tostring(balance))
+        f.close()
+    end
     
     local balanceLabel = sgl.Label:new(2, 2, "Balance: $" .. balance, w - 2)
     balanceLabel.style.fgColor = colors.lime
@@ -266,7 +293,19 @@ local function showMenu()
     end
     root:addChild(logoutBtn)
     
+    f = fs.open("/showmenu_debug.txt", "a")
+    if f then
+        f.writeLine("All buttons added, marking dirty...")
+        f.close()
+    end
+    
     root:markDirty()
+    
+    f = fs.open("/showmenu_debug.txt", "a")
+    if f then
+        f.writeLine("showMenu() complete!")
+        f.close()
+    end
 end
 
 -- Shop Screen
