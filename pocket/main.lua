@@ -136,16 +136,9 @@ local function showLogin()
                     accountNumber = authData.accountNumber
                     username = user
                     balance = authData.balance or 0
-                    statusLabel.style.fgColor = colors.green
-                    statusLabel:setText("Success!")
-                    sleep(0.5)
                     
-                    -- Try to show menu with error handling
-                    local success, err = pcall(showMenu)
-                    if not success then
-                        statusLabel.style.fgColor = colors.red
-                        statusLabel:setText("Menu error: " .. tostring(err))
-                    end
+                    -- Directly transition to menu
+                    showMenu()
                 else
                     statusLabel.style.fgColor = colors.red
                     statusLabel:setText("Authentication failed")
