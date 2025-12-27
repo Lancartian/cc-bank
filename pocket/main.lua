@@ -134,8 +134,8 @@ local function showLogin()
                     username = user
                     balance = authData.balance or 0
                     
-                    -- Directly transition to menu
-                    showMenu()
+                    -- Schedule menu transition to happen after onClick returns
+                    os.queueEvent("show_menu")
                 else
                     statusLabel.style.fgColor = colors.red
                     statusLabel:setText("Authentication failed")
@@ -394,6 +394,11 @@ end
 
 -- Start with login screen
 showLogin()
+
+-- Listen for custom screen transition events
+sgl.eventManager.on("show_menu", function()
+    showMenu()
+end)
 
 -- Run the application
 app:run()
