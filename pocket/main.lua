@@ -241,7 +241,7 @@ showShop = function()
     root:markDirty()
     
     -- Fetch shop catalog (auto-scanned from STORAGE chests)
-    local success, response, err = pcall(function()
+    local success, result = pcall(function()
         return sendToServer(network.MSG.SHOP_GET_CATALOG, {}, true)
     end)
     
@@ -251,6 +251,12 @@ showShop = function()
         root:markDirty()
         return
     end
+    
+    local response, err = result, nil
+    if not response then
+        err = "No response from server"
+    end
+    
     if response and response.type == network.MSG.SUCCESS then
         root:removeChild(statusLabel)
         
@@ -292,18 +298,6 @@ showShop = function()
     end
     
     root:markDirty()
-    end)
-    
-    if not success then
-        clearScreen()
-        local errorLabel = sgl.Label:new(2, 2, "Error: " .. tostring(err), w - 2)
-        errorLabel.style.fgColor = colors.red
-        root:addChild(errorLabel)
-        local backBtn = sgl.Button:new(2, h - 3, w - 2, 3, "Back")
-        backBtn.onClick = function() showMenu() end
-        root:addChild(backBtn)
-        root:markDirty()
-    end
 end
 
 -- Purchase Screen
