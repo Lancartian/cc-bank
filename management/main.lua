@@ -818,10 +818,10 @@ local unlockAccTitle = sgl.Label:new(10, 1, "Unlock Account", 43)
 unlockAccTitle.style.fgColor = colors.yellow
 unlockAccountScreen:addChild(unlockAccTitle)
 
-local unlockAccNumLabel = sgl.Label:new(3, 4, "Account Number:", 20)
+local unlockAccNumLabel = sgl.Label:new(3, 4, "Username:", 20)
 unlockAccountScreen:addChild(unlockAccNumLabel)
 
-local unlockAccNumInput = sgl.Input:new(3, 5, 20, 1)
+local unlockAccNumInput = sgl.Input:new(3, 5, 25, 1)
 unlockAccountScreen:addChild(unlockAccNumInput)
 
 local unlockAccStatusLabel = sgl.Label:new(3, 7, "", 43)
@@ -830,16 +830,16 @@ unlockAccountScreen:addChild(unlockAccStatusLabel)
 local unlockAccBtn = sgl.Button:new(3, 9, 20, 2, "Unlock Account")
 unlockAccBtn.style.bgColor = colors.orange
 unlockAccBtn.onClick = function()
-    local accNum = tonumber(unlockAccNumInput:getText())
-    if not accNum then
-        unlockAccStatusLabel:setText("Please enter a valid account number")
+    local username = unlockAccNumInput:getText()
+    if not username or username == "" then
+        unlockAccStatusLabel:setText("Please enter a username")
         unlockAccStatusLabel.style.fgColor = colors.red
         root:markDirty()
         return
     end
     
     local result, err = sendToServer(network.MSG.ACCOUNT_UNLOCK, {
-        accountNumber = accNum
+        username = username
     })
     
     if result then

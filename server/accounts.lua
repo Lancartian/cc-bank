@@ -102,6 +102,11 @@ end
 
 -- Authenticate user
 function accounts.authenticate(username, password)
+    -- Validate inputs
+    if not username or not password or type(username) ~= "string" or type(password) ~= "string" then
+        return nil, "invalid_credentials"
+    end
+    
     local accountNumber = accountIndex[username]
     if not accountNumber then
         return nil, "invalid_credentials"
@@ -289,6 +294,11 @@ function accounts.setLocked(accountNumber, locked)
     
     accounts.save()
     return true, nil
+end
+
+-- Get account number from username
+function accounts.getAccountNumber(username)
+    return accountIndex[username]
 end
 
 return accounts

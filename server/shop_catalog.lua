@@ -80,14 +80,17 @@ end
 
 -- Scan all STORAGE chests and build catalog
 function catalog.rescan()
+    print("[SHOP CATALOG] Starting rescan...")
     itemCatalog = {}
     local storage = getNetworkStorage()
     
     -- Get all STORAGE chests from network_storage
     local storageChests = storage.getStorageChests()
+    print("[SHOP CATALOG] Found " .. #storageChests .. " STORAGE chests")
     
     if #storageChests == 0 then
         -- No storage chests found, but this is OK - empty catalog
+        print("[SHOP CATALOG] No STORAGE chests found, creating empty catalog")
         cacheValid = true
         lastScanTime = os.epoch("utc")
         saveCache()
@@ -174,6 +177,7 @@ function catalog.rescan()
     end
     
     -- Mark cache as valid and save to disk
+    print("[SHOP CATALOG] Scan complete. Items: " .. catalog.getItemCount() .. ", Stock: " .. catalog.getTotalStock())
     cacheValid = true
     lastScanTime = os.epoch("utc")
     saveCache()

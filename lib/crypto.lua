@@ -246,6 +246,10 @@ end
 
 -- Verify password
 function crypto.verifyPassword(password, storedHash, salt)
+    -- Handle nil values gracefully
+    if not password or not storedHash or not salt then
+        return false
+    end
     local computed = crypto.hmac(salt, password)
     return computed == storedHash
 end

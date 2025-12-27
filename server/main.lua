@@ -379,11 +379,17 @@ handlers[network.MSG.ACCOUNT_UNLOCK] = function(message, sender)
         return network.errorResponse("unauthorized", err or "Management authentication required")
     end
     
-    if not message.data.accountNumber then
-        return network.errorResponse("missing_fields", "Account number required")
+    if not message.data.username then
+        return network.errorResponse("missing_fields", "Username required")
     end
     
-    local success, err = accounts.setLocked(message.data.accountNumber, false)
+    -- Get account number from username
+    local accountNumber = accounts.getAccountNumber(message.data.username)
+    if not accountNumber then
+        return network.errorResponse("account_not_found", "Account not found")
+    end
+    
+    local success, err = accounts.setLocked(accountNumber, false)
     
     if not success then
         return network.errorResponse("unlock_failed", err or "Failed to unlock account")
