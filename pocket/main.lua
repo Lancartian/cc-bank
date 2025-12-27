@@ -375,49 +375,61 @@ showTransfer = function()
         title.style.fgColor = colors.yellow
         root:addChild(title)
     
-    local toLabel = sgl.Label:new(2, 3, "To:", w - 2)
-    root:addChild(toLabel)
-    
-    local toInput = sgl.Input:new(2, 4, w - 2, "")
-    root:addChild(toInput)
-    
-    local amountLabel = sgl.Label:new(2, 6, "Amount:", w - 2)
-    root:addChild(amountLabel)
-    
-    local amountInput = sgl.Input:new(2, 7, w - 2, "")
-    root:addChild(amountInput)
-    
-    local sendBtn = sgl.Button:new(2, 9, w - 2, 3, "Send")
-    sendBtn.style.bgColor = colors.green
-    sendBtn.onClick = function()
-        local toUser = toInput:getText()
-        local amount = tonumber(amountInput:getText())
+        local toLabel = sgl.Label:new(2, 3, "To:", w - 2)
+        root:addChild(toLabel)
         
-        if toUser == "" or not amount or amount <= 0 then
-            showError("Invalid transfer")
-            return
+        local toInput = sgl.Input:new(2, 4, w - 2, "")
+        root:addChild(toInput)
+        
+        local amountLabel = sgl.Label:new(2, 6, "Amount:", w - 2)
+        root:addChild(amountLabel)
+        
+        local amountInput = sgl.Input:new(2, 7, w - 2, "")
+        root:addChild(amountInput)
+        
+        local sendBtn = sgl.Button:new(2, 9, w - 2, 3, "Send")
+        sendBtn.style.bgColor = colors.green
+        sendBtn.onClick = function()
+            local toUser = toInput:getText()
+            local amount = tonumber(amountInput:getText())
+            
+            if toUser == "" or not amount or amount <= 0 then
+                showError("Invalid transfer")
+                return
+            end
+            
+            local response, err = sendToServer(network.MSG.TRANSFER, {
+                toUsername = toUser,
+                amount = amount
+            }, true)
+            
+            if response and response.type == network.MSG.SUCCESS then
+                showError("Transfer successful!")
+                sleep(1)
+                showMenu()
+            else
+                showError(err or "Transfer failed")
+            end
         end
+        root:addChild(sendBtn)
         
-        local response, err = sendToServer(network.MSG.TRANSFER, {
-            toUsername = toUser,
-            amount = amount
-        }, true)
+        local backBtn = sgl.Button:new(2, h - 3, w - 2, 3, "Back")
+        backBtn.onClick = function() showMenu() end
+        root:addChild(backBtn)
         
-        if response and response.type == network.MSG.SUCCESS then
-            showError("Transfer successful!")
-            sleep(1)
-            showMenu()
-        else
-            showError(err or "Transfer failed")
-        end
+        root:markDirty()
+    end)
+    
+    if not success then
+        clearScreen()
+        local errorLabel = sgl.Label:new(2, 2, "Error: " .. tostring(err), w - 2)
+        errorLabel.style.fgColor = colors.red
+        root:addChild(errorLabel)
+        local backBtn = sgl.Button:new(2, h - 3, w - 2, 3, "Back")
+        backBtn.onClick = function() showMenu() end
+        root:addChild(backBtn)
+        root:markDirty()
     end
-    root:addChild(sendBtn)
-    
-    local backBtn = sgl.Button:new(2, h - 3, w - 2, 3, "Back")
-    backBtn.onClick = function() showMenu() end
-    root:addChild(backBtn)
-    
-    root:markDirty()
 end
 
 -- Get encryption key from server
