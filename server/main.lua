@@ -292,18 +292,18 @@ handlers[network.MSG.AUTH_REQUEST] = function(message, sender)
         local decrypted = crypto.decrypt(decoded, encryptionKey)
         
         -- Parse JSON
-        local success, data = pcall(textutils.unserialiseJSON, decrypted)
-        if not success then
+        local success, decryptedData = pcall(textutils.unserialiseJSON, decrypted)
+        if not success or not decryptedData then
+            debugFile = fs.open("/auth_debug.txt", "a")
             if debugFile then
-                debugFile = fs.open("/auth_debug.txt", "a")
-                debugFile.writeLine("  Decryption failed!")
+                debugFile.writeLine("  Decryption/parsing failed: " .. tostring(decryptedData))
                 debugFile.close()
             end
             return network.errorResponse("decryption_failed", "Could not decrypt credentials")
         end
         
-        username = data.username
-        password = data.password
+        username = decryptedData.username
+        password = decryptedData.password
         
         -- Debug: log decrypted values
         debugFile = fs.open("/auth_debug.txt", "a")
