@@ -135,6 +135,10 @@ local function showLogin()
             if response then
                 f.writeLine("Response type: " .. tostring(response.type))
                 f.writeLine("Has data: " .. tostring(response.data ~= nil))
+                if response.data then
+                    f.writeLine("data.encrypted: " .. tostring(response.data.encrypted ~= nil))
+                    f.writeLine("data.isEncrypted: " .. tostring(response.data.isEncrypted))
+                end
             else
                 f.writeLine("Error: " .. tostring(err))
             end
@@ -142,10 +146,34 @@ local function showLogin()
         end
         
         if response and response.type == network.MSG.AUTH_RESPONSE then
+            f = fs.open("/auth_processing_debug.txt", "w")
+            if f then
+                f.writeLine("Processing AUTH_RESPONSE")
+                f.writeLine("Checking data.encrypted...")
+                f.close()
+            end
+            
             if response.data.encrypted then
+                local f2 = fs.open("/auth_decrypt_debug.txt", "w")
+                if f2 then
+                    f2.writeLine("Decrypting response...")
+                    f2.close()
+                end
+                
                 local decrypted = crypto.base64Decode(response.data.encrypted)
                 local decryptedData = crypto.decrypt(decrypted, encryptionKey)
                 local authData = textutils.unserialiseJSON(decryptedData)
+                
+                local f3 = fs.open("/auth_data_debug.txt", "w")
+                if f3 then
+                    f3.writeLine("Auth data parsed: " .. tostring(authData ~= nil))
+                    if authData then
+                        f3.writeLine("Has token: " .. tostring(authData.token ~= nil))
+                        f3.writeLine("Has accountNumber: " .. tostring(authData.accountNumber ~= nil))
+                        f3.writeLine("Has balance: " .. tostring(authData.balance ~= nil))
+                    end
+                    f3.close()
+                end
                 
                 if authData and authData.token then
                     sessionToken = authData.token
