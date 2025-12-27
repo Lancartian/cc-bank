@@ -106,8 +106,8 @@ local function showLogin()
             f.close()
         end
         
-        local user = usernameInput:getValue() or ""
-        local pass = passwordInput:getValue() or ""
+        local user = usernameInput:getText() or ""
+        local pass = passwordInput:getText() or ""
         
         statusLabel:setText("")
         
@@ -119,10 +119,10 @@ local function showLogin()
         statusLabel.style.fgColor = colors.yellow
         statusLabel:setText("Authenticating...")
         
-        local passwordHash = crypto.sha256(pass)
+        -- Send plain password (will be encrypted by network layer)
         local response, err = sendToServer(network.MSG.AUTH_REQUEST, {
             username = user,
-            password = passwordHash
+            password = pass
         }, true)
         
         if response and response.type == network.MSG.AUTH_RESPONSE then
@@ -290,7 +290,7 @@ local function showPurchase(item)
     local buyBtn = sgl.Button:new(2, 9, w - 2, 3, "Buy")
     buyBtn.style.bgColor = colors.green
     buyBtn.onClick = function()
-        local qty = tonumber(qtyInput.text)
+        local qty = tonumber(qtyInput:getText())
         if not qty or qty <= 0 then
             showError("Invalid quantity")
             return
@@ -342,8 +342,8 @@ local function showTransfer()
     local sendBtn = sgl.Button:new(2, 9, w - 2, 3, "Send")
     sendBtn.style.bgColor = colors.green
     sendBtn.onClick = function()
-        local toUser = toInput.text
-        local amount = tonumber(amountInput.text)
+        local toUser = toInput:getText()
+        local amount = tonumber(amountInput:getText())
         
         if toUser == "" or not amount or amount <= 0 then
             showError("Invalid transfer")
