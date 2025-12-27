@@ -877,10 +877,10 @@ local function serverLoop()
             if handler then
                 local response = handler(message, distance)
                 if response then
-                    -- Determine which port to send response to based on message type
+                    -- Determine which port to send response to based on message type and session
                     local responsePort = config.server.port
-                    
-                    -- Management console messages get responses on management port
+
+                    -- Management-only messages
                     if message.type == network.MSG.MGMT_LOGIN or 
                        message.type == network.MSG.ACCOUNT_CREATE or
                        message.type == network.MSG.ACCOUNT_LIST or
@@ -890,10 +890,17 @@ local function serverLoop()
                        message.type == network.MSG.SHOP_MANAGE or
                        message.type == network.MSG.SHOP_SET_PRICE or
                        message.type == network.MSG.SHOP_RENAME_ITEM or
-                       message.type == network.MSG.SHOP_RESCAN or
-                       message.type == network.MSG.SHOP_GET_CATALOG then
+                       message.type == network.MSG.SHOP_RESCAN then
                         responsePort = config.management.port
-                    -- Pocket/Shop messages get responses on their respective ports  
+                    elseif message.type == network.MSG.SHOP_GET_CATALOG then
+                        -- Route SHOP_GET_CATALOG replies to management port if token is a management session,
+                        -- otherwise send to pocket port so pocket clients receive the catalog.
+                        if message.token and managementSessions[message.token] then
+                            responsePort = config.management.port
+                        else
+                            responsePort = config.pocket.port or config.server.port
+                        end
+                    -- Pocket/Shop messages get responses on their respective ports
                     elseif message.type == network.MSG.PING or
                            message.type == network.MSG.AUTH_REQUEST or
                            message.type == network.MSG.BALANCE_CHECK or
@@ -902,7 +909,7 @@ local function serverLoop()
                            message.type == network.MSG.SHOP_PURCHASE then
                         responsePort = config.pocket.port or config.server.port
                     end
-                    
+
                     network.broadcast(modem, responsePort, response)
                 end
             else
