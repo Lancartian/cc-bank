@@ -139,7 +139,13 @@ local function showLogin()
                     statusLabel.style.fgColor = colors.green
                     statusLabel:setText("Success!")
                     sleep(0.5)
-                    showMenu()
+                    
+                    -- Try to show menu with error handling
+                    local success, err = pcall(showMenu)
+                    if not success then
+                        statusLabel.style.fgColor = colors.red
+                        statusLabel:setText("Menu error: " .. tostring(err))
+                    end
                 else
                     statusLabel.style.fgColor = colors.red
                     statusLabel:setText("Authentication failed")
