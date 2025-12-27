@@ -67,6 +67,8 @@ local function showScreen(screenName)
         refreshAccountList()
     elseif screenName == "listItems" and refreshItemList then
         refreshItemList()
+    elseif screenName == "shopCatalog" and refreshCatalog then
+        refreshCatalog()
     elseif screenName == "stats" and refreshStats then
         refreshStats()
     end

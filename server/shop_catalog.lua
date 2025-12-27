@@ -96,7 +96,7 @@ function catalog.rescan()
     
     -- Scan each STORAGE chest
     for _, chestInfo in ipairs(storageChests) do
-        local chest = peripheral.wrap(chestInfo.peripheral)
+        local chest = chestInfo.peripheral  -- Already wrapped
         if chest and chest.list then
             local items = chest.list()
             
@@ -117,12 +117,12 @@ function catalog.rescan()
                     -- Add to total stock
                     itemCatalog[item.name].totalStock = itemCatalog[item.name].totalStock + item.count
                     
-                    -- Track location
-                    if not itemCatalog[item.name].locations[chestInfo.peripheral] then
-                        itemCatalog[item.name].locations[chestInfo.peripheral] = 0
+                    -- Track location (use string name as key)
+                    if not itemCatalog[item.name].locations[chestInfo.name] then
+                        itemCatalog[item.name].locations[chestInfo.name] = 0
                     end
-                    itemCatalog[item.name].locations[chestInfo.peripheral] = 
-                        itemCatalog[item.name].locations[chestInfo.peripheral] + item.count
+                    itemCatalog[item.name].locations[chestInfo.name] = 
+                        itemCatalog[item.name].locations[chestInfo.name] + item.count
                 end
             end
         end
@@ -132,8 +132,9 @@ function catalog.rescan()
     for itemName, itemData in pairs(itemCatalog) do
         -- Try to get detailed info from first location
         for chestName, _ in pairs(itemData.locations) do
+            -- chestName is already a string peripheral name
             local chest = peripheral.wrap(chestName)
-            if chest then
+            if chest and chest.list then
                 local items = chest.list()
                 for slot, item in pairs(items) do
                     if item.name == itemName then
