@@ -114,9 +114,11 @@ function accounts.authenticate(username, password)
         if account.lockoutUntil and os.epoch("utc") < account.lockoutUntil then
             return nil, "account_locked"
         else
+            -- Lockout expired, unlock the account
             account.locked = false
             account.failedAttempts = 0
             account.lockoutUntil = nil
+            accounts.save()
         end
     end
     

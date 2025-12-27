@@ -367,6 +367,27 @@ handlers[network.MSG.ACCOUNT_LIST] = function(message, sender)
     })
 end
 
+-- Account unlock (management only)
+handlers[network.MSG.ACCOUNT_UNLOCK] = function(message, sender)
+    -- Require management authentication
+    local mgmtSession, err = validateManagementSession(message.token)
+    if not mgmtSession then
+        return network.errorResponse("unauthorized", err or "Management authentication required")
+    end
+    
+    if not message.data.accountNumber then
+        return network.errorResponse("missing_fields", "Account number required")
+    end
+    
+    local success, err = accounts.setLocked(message.data.accountNumber, false)
+    
+    if not success then
+        return network.errorResponse("unlock_failed", err or "Failed to unlock account")
+    end
+    
+    return network.successResponse({message = "Account unlocked successfully"})
+end
+
 -- Balance check
 handlers[network.MSG.BALANCE_CHECK] = function(message, sender)
     -- Check nonce
@@ -695,6 +716,7 @@ local function serverLoop()
                        message.type == network.MSG.ACCOUNT_CREATE or
                        message.type == network.MSG.ACCOUNT_LIST or
                        message.type == network.MSG.ACCOUNT_DELETE or
+                       message.type == network.MSG.ACCOUNT_UNLOCK or
                        message.type == network.MSG.SHOP_MANAGE then
                         responsePort = config.management.port
                     -- Pocket/Shop messages get responses on their respective ports  

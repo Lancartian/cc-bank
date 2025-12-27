@@ -54,8 +54,8 @@ local function sendToServer(msgType, data, waitForResponse)
     return true, nil
 end
 
--- Forward declarations for screen functions
-local showLogin, showMenu, showShop, showPurchase, showTransfer
+-- Forward declarations for screen functions (order matters for cross-references)
+local showLogin, showMenu, showShop, showTransfer, showPurchase
 
 local function clearScreen()
     -- Remove all children from root panel
@@ -248,7 +248,7 @@ showShop = function()
             root:addChild(itemList)
         end
     else
-        statusLabel.text = "Error: " .. tostring(err)
+        statusLabel:setText("Error: " .. tostring(err or "Unknown error"))
     end
     
     root:markDirty()

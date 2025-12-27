@@ -24,6 +24,7 @@ network.MSG = {
     ACCOUNT_INFO = "ACCT_INFO",
     ACCOUNT_DELETE = "ACCT_DELETE",
     ACCOUNT_LIST = "ACCT_LIST",
+    ACCOUNT_UNLOCK = "ACCT_UNLOCK",
     
     -- Transactions
     BALANCE_CHECK = "BAL_CHECK",

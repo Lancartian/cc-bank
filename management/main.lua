@@ -296,6 +296,13 @@ listAccBtn.onClick = function()
 end
 accountsScreen:addChild(listAccBtn)
 
+local unlockAccBtn = sgl.Button:new(3, 6, 38, 2, "Unlock Account")
+unlockAccBtn.style.bgColor = colors.orange
+unlockAccBtn.onClick = function()
+    showScreen("unlockAccount")
+end
+accountsScreen:addChild(unlockAccBtn)
+
 local accountsBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
 accountsBackBtn.onClick = function()
     showScreen("main")
@@ -723,8 +730,9 @@ local function refreshAccountList()
         for i = 1, 10 do
             if result.accounts[i] then
                 local acc = result.accounts[i]
-                accountListLabels[i]:setText(acc.username .. " (#" .. acc.accountNumber .. ") - " .. acc.balance .. " Credits")
-                accountListLabels[i].style.fgColor = colors.white
+                local lockStatus = acc.locked and " [LOCKED]" or ""
+                accountListLabels[i]:setText(acc.username .. " (#" .. acc.accountNumber .. ") - " .. acc.balance .. " Credits" .. lockStatus)
+                accountListLabels[i].style.fgColor = acc.locked and colors.red or colors.white
             else
                 accountListLabels[i]:setText("")
             end
@@ -752,6 +760,59 @@ listAccRefreshBtn.onClick = function()
     refreshAccountList()
 end
 listAccountsScreen:addChild(listAccRefreshBtn)
+
+-- Unlock Account screen
+local unlockAccountScreen = sgl.Panel:new(2, 2, 47, 15)
+unlockAccountScreen:setBorder(false)
+unlockAccountScreen:setVisible(false)
+unlockAccountScreen.data = {isScreen = true, screenName = "unlockAccount"}
+root:addChild(unlockAccountScreen)
+
+local unlockAccTitle = sgl.Label:new(10, 1, "Unlock Account", 43)
+unlockAccTitle.style.fgColor = colors.yellow
+unlockAccountScreen:addChild(unlockAccTitle)
+
+local unlockAccNumLabel = sgl.Label:new(3, 4, "Account Number:", 20)
+unlockAccountScreen:addChild(unlockAccNumLabel)
+
+local unlockAccNumInput = sgl.Input:new(3, 5, 20, 1)
+unlockAccountScreen:addChild(unlockAccNumInput)
+
+local unlockAccStatusLabel = sgl.Label:new(3, 7, "", 43)
+unlockAccountScreen:addChild(unlockAccStatusLabel)
+
+local unlockAccBtn = sgl.Button:new(3, 9, 20, 2, "Unlock Account")
+unlockAccBtn.style.bgColor = colors.orange
+unlockAccBtn.onClick = function()
+    local accNum = tonumber(unlockAccNumInput:getText())
+    if not accNum then
+        unlockAccStatusLabel:setText("Please enter a valid account number")
+        unlockAccStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    local result, err = sendToServer(network.MSG.ACCOUNT_UNLOCK, {
+        accountNumber = accNum
+    })
+    
+    if result then
+        unlockAccStatusLabel:setText("Account unlocked successfully!")
+        unlockAccStatusLabel.style.fgColor = colors.green
+        unlockAccNumInput:setText("")
+    else
+        unlockAccStatusLabel:setText("Error: " .. tostring(err))
+        unlockAccStatusLabel.style.fgColor = colors.red
+    end
+    root:markDirty()
+end
+unlockAccountScreen:addChild(unlockAccBtn)
+
+local unlockAccBackBtn = sgl.Button:new(3, 12, 15, 1, "Back")
+unlockAccBackBtn.onClick = function()
+    showScreen("accounts")
+end
+unlockAccountScreen:addChild(unlockAccBackBtn)
 
 -- Determine initial screen and focus
 if not config.management.masterPasswordHash then
