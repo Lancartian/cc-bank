@@ -178,12 +178,6 @@ local function showMenu()
     clearScreen()
     currentScreen = "menu"
     
-    -- Update balance
-    local response, err = sendToServer(network.MSG.BALANCE_CHECK, {}, true)
-    if response and response.type == network.MSG.SUCCESS then
-        balance = response.data.balance
-    end
-    
     local title = sgl.Label:new(2, 1, username, w - 2)
     title.style.fgColor = colors.yellow
     root:addChild(title)
