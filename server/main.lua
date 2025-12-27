@@ -678,21 +678,28 @@ end
 
 -- Shop Catalog - Get all items (auto-scanned from STORAGE chests)
 handlers[network.MSG.SHOP_GET_CATALOG] = function(message, sender)
+    -- Allow either a normal user session or a management session to fetch the catalog
     local session, err = validateSession(message.token)
+    local mgmtSession = nil
     if not session then
+        mgmtSession, err = validateManagementSession(message.token)
+    end
+    if not session and not mgmtSession then
         return network.errorResponse("session_error", err)
     end
-    
+
+    print("[SERVER] SHOP_GET_CATALOG requested by " .. tostring(sender))
+
     local success, result = pcall(function()
         local searchTerm = message.data and message.data.search
         local items
-        
+
         if searchTerm then
             items = shopCatalog.search(searchTerm)
         else
             items = shopCatalog.getAll()
         end
-        
+
         return {
             items = items,
             totalItems = shopCatalog.getItemCount(),
