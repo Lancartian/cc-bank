@@ -15,6 +15,7 @@ local authenticated = false
 local managementToken = nil
 local statusMessage = ""
 local messageColor = colors.white
+local catalogData = {}
 
 -- Initialize modem
 local modem = network.init(config.management.port)
@@ -71,6 +72,22 @@ local function showScreen(screenName)
         refreshItemList()
     elseif screenName == "shopCatalog" and refreshCatalog then
         refreshCatalog()
+    elseif screenName == "setPrice" and refreshCatalog then
+        -- Ensure we have latest catalog for set-price selection
+        refreshCatalog()
+        -- populate the set-price list widget if present
+        if priceItemList and catalogData then
+            local listItems = {}
+            for _, it in ipairs(catalogData) do
+                local priceText = it.price and it.price > 0 and ("$" .. it.price) or "[No price]"
+                table.insert(listItems, string.format("%s - %s (x%d)", it.displayName, priceText, it.stock))
+            end
+            if #listItems == 0 then
+                priceItemList.items = {"No items in STORAGE chests"}
+            else
+                priceItemList.items = listItems
+            end
+        end
     elseif screenName == "stats" and refreshStats then
         refreshStats()
     end
@@ -387,6 +404,8 @@ local function refreshCatalog()
             result.totalItems or 0, result.totalStock or 0))
         catalogInfoLabel.style.fgColor = colors.gray
         local listItems = {}
+        -- store raw catalog data for other screens (set-price)
+        catalogData = result.items or {}
         for _, item in ipairs(result.items) do
             local priceText = item.price and item.price > 0 and ("$" .. item.price) or "[No price]"
             table.insert(listItems, string.format("%s - %s (x%d)", item.displayName, priceText, item.stock))
@@ -426,17 +445,22 @@ local setPriceTitle = sgl.Label:new(10, 1, "Set Item Price", 43)
 setPriceTitle.style.fgColor = colors.yellow
 setPriceScreen:addChild(setPriceTitle)
 
-local priceItemLabel = sgl.Label:new(2, 3, "Item Name (from catalog):", 43)
+local priceItemLabel = sgl.Label:new(2, 3, "Select Item (from catalog):", 43)
 priceItemLabel.style.fgColor = colors.gray
 setPriceScreen:addChild(priceItemLabel)
 
-local priceItemInput = sgl.Input:new(2, 4, 40, 1)
-setPriceScreen:addChild(priceItemInput)
+-- Use a list to select item (stores index into catalogData)
+local priceItemList = sgl.List:new(2, 4, 40, 4)
+local priceSelectedIndex = nil
+priceItemList.onSelectionChanged = function(index, text)
+    priceSelectedIndex = index
+end
+setPriceScreen:addChild(priceItemList)
 
-local newPriceLabel = sgl.Label:new(2, 6, "New Price:", 43)
+local newPriceLabel = sgl.Label:new(2, 9, "New Price:", 43)
 setPriceScreen:addChild(newPriceLabel)
 
-local newPriceInput = sgl.Input:new(2, 7, 40, 1)
+local newPriceInput = sgl.Input:new(2, 10, 40, 1)
 setPriceScreen:addChild(newPriceInput)
 
 local setPriceStatusLabel = sgl.Label:new(2, 9, "", 43)
@@ -445,15 +469,22 @@ setPriceScreen:addChild(setPriceStatusLabel)
 local setPriceBtn = sgl.Button:new(10, 11, 25, 2, "Set Price")
 setPriceBtn.style.bgColor = colors.green
 setPriceBtn.onClick = function()
-    local itemName = priceItemInput:getText()
     local price = tonumber(newPriceInput:getText())
-    
-    if itemName == "" or not price or price < 0 then
-        setPriceStatusLabel:setText("Invalid item name or price")
+    if not price or price < 0 then
+        setPriceStatusLabel:setText("Invalid price")
         setPriceStatusLabel.style.fgColor = colors.red
         root:markDirty()
         return
     end
+
+    if not priceSelectedIndex or not catalogData or not catalogData[priceSelectedIndex] then
+        setPriceStatusLabel:setText("Please select an item from the list")
+        setPriceStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+
+    local itemName = catalogData[priceSelectedIndex].name
     
     setPriceStatusLabel:setText("Updating price...")
     setPriceStatusLabel.style.fgColor = colors.white
@@ -467,7 +498,8 @@ setPriceBtn.onClick = function()
     if result then
         setPriceStatusLabel:setText("Price updated successfully!")
         setPriceStatusLabel.style.fgColor = colors.green
-        priceItemInput:setText("")
+        priceSelectedIndex = nil
+        priceItemList.items = {}
         newPriceInput:setText("")
     else
         setPriceStatusLabel:setText("Error: " .. tostring(err))
