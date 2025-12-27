@@ -65,10 +65,40 @@ local function downloadFile(url, path)
     end
     
     print("  Running wget...")
-    local success = shell.run("wget", url, path)
-    
+    -- Ensure parent directory exists
+    local dir = string.match(path, "(.+)/[^/]+$")
+    if dir and not fs.exists(dir) then
+        fs.makeDir(dir)
+        print("  Created directory: " .. dir)
+    end
+
+    local success = false
+    -- Prefer using wget if available
+    local ok, _ = pcall(function() return shell.run("wget", url, path) end)
+    if ok then
+        success = fs.exists(path)
+    end
+
+    -- Fallback to http.get if wget failed (useful in some CC environments)
+    if not success and http and http.get then
+        print("  wget failed, attempting http.get fallback...")
+        local resp = http.get(url)
+        if resp then
+            local content = resp.readAll()
+            resp.close()
+            local file = fs.open(path, "w")
+            if file then
+                file.write(content)
+                file.close()
+                success = true
+            end
+        else
+            print("  http.get returned nil for " .. url)
+        end
+    end
+
     if not success then
-        print("ERROR: wget command failed!")
+        print("ERROR: failed to download " .. path)
         return false
     end
     
