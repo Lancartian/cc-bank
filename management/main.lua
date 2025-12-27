@@ -996,19 +996,18 @@ end
 -- Background refresher: when viewing shop catalog or set-price, refresh every 5 seconds
 local function managementRefresher()
     while true do
-        if root and (root:getChildByData and (root:getChildByData("shopCatalog") or root:getChildByData("setPrice"))) then
-            -- If current screen is shopCatalog or setPrice, refresh
-            local currentScreen = nil
-            for i = 1, #root.children do
-                local c = root.children[i]
-                if c.data and c.data.isScreen and c.visible then
-                    currentScreen = c.data.screenName
-                    break
-                end
+        -- Determine current visible screen by scanning root children
+        local currentScreen = nil
+        for i = 1, #root.children do
+            local c = root.children[i]
+            if c and c.data and c.data.isScreen and c.visible then
+                currentScreen = c.data.screenName
+                break
             end
-            if currentScreen == "shopCatalog" or currentScreen == "setPrice" then
-                pcall(function() refreshCatalog() end)
-            end
+        end
+
+        if currentScreen == "shopCatalog" or currentScreen == "setPrice" then
+            pcall(function() refreshCatalog() end)
         end
         sleep(5)
     end
