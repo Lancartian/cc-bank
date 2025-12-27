@@ -118,6 +118,11 @@ local function showLogin()
         
         statusLabel.style.fgColor = colors.yellow
         statusLabel:setText("Authenticating...")
+        root:markDirty()
+        
+        -- Let the UI update before blocking on network call
+        os.queueEvent("dummy")
+        os.pullEvent("dummy")
         
         -- Send plain password (will be encrypted by network layer)
         local response, err = sendToServer(network.MSG.AUTH_REQUEST, {
