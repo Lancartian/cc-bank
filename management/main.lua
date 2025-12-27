@@ -463,16 +463,16 @@ priceItemList.onSelectionChanged = function(index, text)
 end
 setPriceScreen:addChild(priceItemList)
 
-local newPriceLabel = sgl.Label:new(2, 9, "New Price:", 43)
+local newPriceLabel = sgl.Label:new(2, 8, "New Price:", 43)
 setPriceScreen:addChild(newPriceLabel)
 
-local newPriceInput = sgl.Input:new(2, 10, 40, 1)
+local newPriceInput = sgl.Input:new(2, 9, 40, 1)
 setPriceScreen:addChild(newPriceInput)
 
-local setPriceStatusLabel = sgl.Label:new(2, 9, "", 43)
+local setPriceStatusLabel = sgl.Label:new(2, 11, "", 43)
 setPriceScreen:addChild(setPriceStatusLabel)
 
-local setPriceBtn = sgl.Button:new(10, 11, 25, 2, "Set Price")
+local setPriceBtn = sgl.Button:new(10, 12, 25, 2, "Set Price")
 setPriceBtn.style.bgColor = colors.green
 setPriceBtn.onClick = function()
     local price = tonumber(newPriceInput:getText())
@@ -523,6 +523,23 @@ setPriceBtn.onClick = function()
     root:markDirty()
 end
 setPriceScreen:addChild(setPriceBtn)
+
+-- Refresh button for set-price list
+local priceRefreshBtn = sgl.Button:new(43, 4, 6, 1, "Refresh")
+priceRefreshBtn.onClick = function()
+    -- Refresh catalog and repopulate list
+    refreshCatalog()
+    if priceItemList and catalogData then
+        local listItems = {}
+        for _, it in ipairs(catalogData) do
+            local priceText = it.price and it.price > 0 and ("$" .. it.price) or "[No price]"
+            table.insert(listItems, string.format("%s - %s (x%d)", it.displayName, priceText, it.stock))
+        end
+        priceItemList.items = #listItems == 0 and {"No items in STORAGE chests"} or listItems
+    end
+    root:markDirty()
+end
+setPriceScreen:addChild(priceRefreshBtn)
 
 local setPriceBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
 setPriceBackBtn.onClick = function()
