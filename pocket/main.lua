@@ -111,10 +111,6 @@ local function showLogin()
         
         statusLabel.style.fgColor = colors.yellow
         statusLabel:setText("Authenticating...")
-        root:markDirty()
-        
-        -- Yield to let SGL render the status update
-        sleep(0)
         
         -- Send plain password (will be encrypted by network layer)
         local response, err = sendToServer(network.MSG.AUTH_REQUEST, {
@@ -134,8 +130,7 @@ local function showLogin()
                     username = user
                     balance = authData.balance or 0
                     
-                    -- Schedule menu transition to happen after onClick returns
-                    os.queueEvent("show_menu")
+                    showMenu()
                 else
                     statusLabel.style.fgColor = colors.red
                     statusLabel:setText("Authentication failed")
@@ -394,11 +389,6 @@ end
 
 -- Start with login screen
 showLogin()
-
--- Listen for custom screen transition events
-sgl.eventManager.on("show_menu", function()
-    showMenu()
-end)
 
 -- Run the application
 app:run()
