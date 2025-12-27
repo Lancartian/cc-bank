@@ -105,8 +105,7 @@ function catalog.rescan()
     local storageChests = storage.getStorageChests()
     print("[SHOP CATALOG] Found " .. #storageChests .. " STORAGE chests")
     
-    if #isScanning = false
-        storageChests == 0 then
+    if #storageChests == 0 then
         -- No storage chests found, but this is OK - empty catalog
         print("[SHOP CATALOG] No STORAGE chests found, creating empty catalog")
         cacheValid = true
