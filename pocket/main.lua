@@ -169,36 +169,57 @@ end
 
 -- Main Menu Screen
 showMenu = function()
-    clearScreen()
-    currentScreen = "menu"
+    local success, err = pcall(function()
+        clearScreen()
+        currentScreen = "menu"
+        
+        local title = sgl.Label:new(2, 1, username, w - 2)
+        title.style.fgColor = colors.yellow
+        root:addChild(title)
+        
+        local balanceLabel = sgl.Label:new(2, 2, "Balance: $" .. balance, w - 2)
+        balanceLabel.style.fgColor = colors.lime
+        root:addChild(balanceLabel)
+        
+        local shopBtn = sgl.Button:new(2, 4, w - 2, 3, "Shop")
+        shopBtn.onClick = function() showShop() end
+        root:addChild(shopBtn)
+        
+        local transferBtn = sgl.Button:new(2, 8, w - 2, 3, "Transfer")
+        transferBtn.onClick = function() showTransfer() end
+        root:addChild(transferBtn)
+        
+        local logoutBtn = sgl.Button:new(2, h - 3, w - 2, 3, "Logout")
+        logoutBtn.style.bgColor = colors.red
+        logoutBtn.onClick = function()
+            sessionToken = nil
+            accountNumber = nil
+            username = nil
+            showLogin()
+        end
+        root:addChild(logoutBtn)
+        
+        root:markDirty()
+    end)
     
-    local title = sgl.Label:new(2, 1, username, w - 2)
-    title.style.fgColor = colors.yellow
-    root:addChild(title)
-    
-    local balanceLabel = sgl.Label:new(2, 2, "Balance: $" .. balance, w - 2)
-    balanceLabel.style.fgColor = colors.lime
-    root:addChild(balanceLabel)
-    
-    local shopBtn = sgl.Button:new(2, 4, w - 2, 3, "Shop")
-    shopBtn.onClick = function() showShop() end
-    root:addChild(shopBtn)
-    
-    local transferBtn = sgl.Button:new(2, 8, w - 2, 3, "Transfer")
-    transferBtn.onClick = function() showTransfer() end
-    root:addChild(transferBtn)
-    
-    local logoutBtn = sgl.Button:new(2, h - 3, w - 2, 3, "Logout")
-    logoutBtn.style.bgColor = colors.red
-    logoutBtn.onClick = function()
-        sessionToken = nil
-        accountNumber = nil
-        username = nil
-        showLogin()
+    if not success then
+        clearScreen()
+        local errorLabel = sgl.Label:new(2, 2, "Error loading menu", w - 2)
+        errorLabel.style.fgColor = colors.red
+        root:addChild(errorLabel)
+        local detailLabel = sgl.Label:new(2, 3, tostring(err), w - 2)
+        detailLabel.style.fgColor = colors.gray
+        root:addChild(detailLabel)
+        local logoutBtn = sgl.Button:new(2, h - 3, w - 2, 3, "Logout")
+        logoutBtn.onClick = function()
+            sessionToken = nil
+            accountNumber = nil
+            username = nil
+            showLogin()
+        end
+        root:addChild(logoutBtn)
+        root:markDirty()
     end
-    root:addChild(logoutBtn)
-    
-    root:markDirty()
 end
 
 -- Shop Screen
@@ -220,7 +241,16 @@ showShop = function()
     root:markDirty()
     
     -- Fetch shop catalog (auto-scanned from STORAGE chests)
-    local response, err = sendToServer(network.MSG.SHOP_GET_CATALOG, {}, true)
+    local success, response, err = pcall(function()
+        return sendToServer(network.MSG.SHOP_GET_CATALOG, {}, true)
+    end)
+    
+    if not success then
+        statusLabel:setText("Error: Connection failed")
+        statusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
     if response and response.type == network.MSG.SUCCESS then
         root:removeChild(statusLabel)
         
@@ -262,12 +292,25 @@ showShop = function()
     end
     
     root:markDirty()
+    end)
+    
+    if not success then
+        clearScreen()
+        local errorLabel = sgl.Label:new(2, 2, "Error: " .. tostring(err), w - 2)
+        errorLabel.style.fgColor = colors.red
+        root:addChild(errorLabel)
+        local backBtn = sgl.Button:new(2, h - 3, w - 2, 3, "Back")
+        backBtn.onClick = function() showMenu() end
+        root:addChild(backBtn)
+        root:markDirty()
+    end
 end
 
 -- Purchase Screen
 showPurchase = function(item)
-    clearScreen()
-    currentScreen = "purchase"
+    local success, err = pcall(function()
+        clearScreen()
+        currentScreen = "purchase"
     
     local title = sgl.Label:new(2, 1, item.displayName, w - 2)
     title.style.fgColor = colors.yellow
@@ -314,16 +357,29 @@ showPurchase = function(item)
     root:addChild(backBtn)
     
     root:markDirty()
+    end)
+    
+    if not success then
+        clearScreen()
+        local errorLabel = sgl.Label:new(2, 2, "Error: " .. tostring(err), w - 2)
+        errorLabel.style.fgColor = colors.red
+        root:addChild(errorLabel)
+        local backBtn = sgl.Button:new(2, h - 3, w - 2, 3, "Back")
+        backBtn.onClick = function() showShop() end
+        root:addChild(backBtn)
+        root:markDirty()
+    end
 end
 
 -- Transfer Screen
 showTransfer = function()
-    clearScreen()
-    currentScreen = "transfer"
-    
-    local title = sgl.Label:new(2, 1, "Transfer", w - 2)
-    title.style.fgColor = colors.yellow
-    root:addChild(title)
+    local success, err = pcall(function()
+        clearScreen()
+        currentScreen = "transfer"
+        
+        local title = sgl.Label:new(2, 1, "Transfer", w - 2)
+        title.style.fgColor = colors.yellow
+        root:addChild(title)
     
     local toLabel = sgl.Label:new(2, 3, "To:", w - 2)
     root:addChild(toLabel)

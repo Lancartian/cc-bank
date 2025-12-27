@@ -100,29 +100,41 @@ function catalog.rescan()
         if chest and chest.list then
             local items = chest.list()
             
-            for slot, item in pairs(items) do
-                -- Skip marker papers
-                if item.name ~= "minecraft:paper" then
-                    -- Initialize item entry if needed
-                    if not itemCatalog[item.name] then
-                        itemCatalog[item.name] = {
-                            name = item.name,
-                            displayName = nil,
-                            totalStock = 0,
-                            price = 0,  -- Default price, can be set by management console
-                            locations = {}
-                        }
+            -- Check if list() returned valid data
+            if items and type(items) == "table" then
+                for slot, item in pairs(items) do
+                    local shouldSkip = false
+                    
+                    -- Skip STORAGE marker papers specifically
+                    if item.name == "minecraft:paper" then
+                        local detail = chest.getItemDetail(slot)
+                        if detail and detail.displayName and detail.displayName == "STORAGE" then
+                            shouldSkip = true
+                        end
                     end
                     
-                    -- Add to total stock
-                    itemCatalog[item.name].totalStock = itemCatalog[item.name].totalStock + item.count
-                    
-                    -- Track location (use string name as key)
-                    if not itemCatalog[item.name].locations[chestInfo.name] then
-                        itemCatalog[item.name].locations[chestInfo.name] = 0
+                    if not shouldSkip then
+                        -- Initialize item entry if needed
+                        if not itemCatalog[item.name] then
+                            itemCatalog[item.name] = {
+                                name = item.name,
+                                displayName = nil,
+                                totalStock = 0,
+                                price = 0,  -- Default price, can be set by management console
+                                locations = {}
+                            }
+                        end
+                        
+                        -- Add to total stock
+                        itemCatalog[item.name].totalStock = itemCatalog[item.name].totalStock + item.count
+                        
+                        -- Track location (use string name as key)
+                        if not itemCatalog[item.name].locations[chestInfo.name] then
+                            itemCatalog[item.name].locations[chestInfo.name] = 0
+                        end
+                        itemCatalog[item.name].locations[chestInfo.name] = 
+                            itemCatalog[item.name].locations[chestInfo.name] + item.count
                     end
-                    itemCatalog[item.name].locations[chestInfo.name] = 
-                        itemCatalog[item.name].locations[chestInfo.name] + item.count
                 end
             end
         end
