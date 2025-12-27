@@ -30,12 +30,12 @@ A modern, fully digital banking system for ComputerCraft with secure encryption,
 - **Transaction logging**: Complete audit trail of all transactions
 
 ### 🛒 Shop System
-- **Item catalog**: Browse and purchase items from the shop
-- **Smart inventory**: Automatic organization of shop items into STORAGE chests
-- **Real-time stock**: Live stock tracking across multiple STORAGE chests
+- **Auto-scanning catalog**: Items automatically detected from STORAGE chests - no manual entry!
+- **Simple setup**: Place items in STORAGE chests, rescan, set prices - items appear in shop
+- **Live stock tracking**: Real-time inventory levels from physical chest contents
 - **Void chest delivery**: Purchased items delivered directly to user's void chest
-- **Price management**: Admins set prices and manage catalog via management console
-- **INPUT processing**: Place items in INPUT chests, process them into organized STORAGE
+- **Easy price management**: Simple interface to set prices for detected items
+- **Multiple STORAGE chests**: System scans all chests labeled "STORAGE" automatically
 
 ### 📱 Pocket Computer App
 - **Mobile banking**: Access your account from any pocket computer
@@ -45,8 +45,9 @@ A modern, fully digital banking system for ComputerCraft with secure encryption,
 
 ### 🎮 Management Console
 - **Admin interface**: Easy-to-use management console with SGL interface
-- **Account administration**: Create accounts, adjust balances, manage users
-- **Shop management**: Add items to catalog, set prices, process INPUT chests
+- **Account administration**: Create accounts, adjust balances, manage users, unlock locked accounts
+- **Auto-scanning shop**: View catalog, set prices, rescan STORAGE chests
+- **Simple workflow**: No manual catalog entry - items auto-detected from chests
 - **System monitoring**: View statistics, transaction history, account status
 
 ## System Requirements
@@ -190,58 +191,82 @@ Each user needs a personal void chest at their base:
 
 ### Overview
 
-The shop system allows admins to sell items to users with automatic delivery:
+The shop system automatically detects items in STORAGE chests and makes them available for purchase. No manual catalog entry needed!
 
+**Simple workflow:**
 ```
-[Items placed in INPUT chest]
+[Place items in STORAGE chest with "STORAGE" paper marker]
           ↓
-[Admin processes via management console]
+[Rescan STORAGE chests via management console]
           ↓
-[Smart organization into STORAGE chests]
+[Set prices for items you want to sell]
           ↓
-[Users browse catalog on pocket computer]
+[Items with prices appear in shop automatically]
           ↓
-[User purchases item]
+[Users purchase items on pocket computer]
           ↓
-[Balance deducted, item delivered to void chest]
+[Balance deducted, items delivered to void chest]
 ```
 
-### For Admins: Adding Items to Shop
+### For Admins: Setting Up Shop Items
 
-#### Step 1: Place Items in INPUT Chests
-- Put items you want to sell into any chest labeled "INPUT"
-- Multiple INPUT chests can be used
-- Items stay in INPUT until processed
+#### Step 1: Label STORAGE Chests
+1. Use anvil to rename paper to "STORAGE"
+2. Place renamed paper in first slot of chest
+3. Connect chest to server via wired modem + networking cable
+4. Multiple STORAGE chests supported - system scans them all
 
-#### Step 2: Process INPUT Chests
+#### Step 2: Add Items to Sell
+- Simply place items in any STORAGE chest
+- Items stay there until purchased
+- Add more stock anytime by adding items to chests
+
+#### Step 3: Rescan STORAGE Chests
 1. Open management console
 2. Navigate to **Shop Management**
-3. Select **Process INPUT Chests**
-4. Click **Process Now**
+3. Select **Rescan STORAGE Chests**
+4. Click **Rescan Now**
 
 The system will:
-- Scan all INPUT chests for items
-- Intelligently organize items into STORAGE chests:
-  * First tries to stack with existing items
-  * Then fills empty slots
-  * Distributes across multiple STORAGE chests
-- Report how many items were processed
+- Scan all STORAGE chests automatically
+- Detect all items and quantities
+- Get display names from Minecraft
+- Update the catalog cache
+- Report total items and stock found
 
-#### Step 3: Add Items to Catalog
-1. Navigate to **Shop Management** → **Add Item**
+#### Step 4: Set Prices
+1. Navigate to **Shop Management** → **Set Item Prices**
 2. Enter item details:
    - **Item Name**: Exact Minecraft ID (e.g., `minecraft:diamond`, `minecraft:iron_ingot`)
+     - Tip: Check "View Shop Catalog" to see exact item names detected
    - **Price**: How much users pay (in Credits)
-   - **Category**: Organization (e.g., "Ores", "Tools", "Food")
-   - **Description**: Optional description
-3. Click **Add Item**
+3. Click **Set Price**
 
-Item is now available for purchase!
+**Important**: Only items with price > 0 appear in the shop!
 
-#### Managing Catalog
-- **List Items**: View all items in catalog
-- **Edit Items**: Update prices or descriptions via SHOP_MANAGE
-- **Remove Items**: Delete items from catalog (stock remains in STORAGE)
+#### Managing the Shop
+- **View Shop Catalog**: See all items in STORAGE chests with prices and stock
+- **Set Item Prices**: Update prices anytime
+- **Rescan STORAGE Chests**: Refresh catalog when you add/remove items
+- **Stock levels update automatically** - based on what's physically in chests
+
+### Auto-Scanning Details
+
+The system works like the CC-STR storage system you might be familiar with:
+
+**Automatic Detection**:
+- Scans all chests with "STORAGE" marker paper
+- Detects every item type and counts quantity
+- Gets proper display names from Minecraft
+- Groups items by type across multiple chests
+- Caches results for fast performance
+
+**Benefits**:
+- **No manual entry** - just put items in chests
+- **Always accurate** - stock reflects physical inventory
+- **Simple to use** - rescan whenever you restock
+- **Multiple chests** - distributes load, organized however you want
+- **Real-time pricing** - change prices without rescanning
 
 ### For Users: Shopping on Pocket Computer
 
@@ -252,6 +277,7 @@ Item is now available for purchase!
      * Display name
      * Price
      * Current stock level
+   - Only items with prices appear in the shop
 
 2. **Purchase Item**:
    - Tap item to view details
@@ -269,28 +295,6 @@ Item is now available for purchase!
 3. **Collect Items**:
    - Items appear instantly in your void chest at home
    - Pick them up from your collection system
-
-### Smart Organization Details
-
-The system uses a two-phase organization algorithm:
-
-**Phase 1 - Stack with existing items**:
-- For each item in INPUT chests
-- Search STORAGE chests for matching item stacks
-- Push items to existing stacks (fills them up)
-- Continue until item fully distributed or stacks full
-
-**Phase 2 - Fill empty slots**:
-- If items remain after Phase 1
-- Find empty slots in STORAGE chests
-- Place remaining items
-- Distribute across multiple chests as needed
-
-**Benefits**:
-- Items of same type grouped together
-- Efficient use of chest space
-- Easy to locate specific items
-- Automatic load balancing across chests
 
 ## Usage
 
@@ -331,17 +335,18 @@ The system uses a two-phase organization algorithm:
 4. Click **Create**
 
 #### Manage Shop
-1. **Add Items**:
-   - Place items in INPUT chests
-   - Management → Shop Management → Process INPUT Chests
-   - Shop Management → Add Item → Enter details
+1. **Add Items to Sell**:
+   - Place items in any STORAGE chest
+   - Shop Management → Rescan STORAGE Chests
+   - Shop Management → Set Item Prices → Enter item name and price
 
-2. **View Inventory**:
-   - Shop Management → List Items
-   - Shows all catalog items with prices
+2. **View Catalog**:
+   - Shop Management → View Shop Catalog
+   - Shows all detected items with prices and stock
 
 3. **Update Prices**:
-   - Re-add items with new prices to update
+   - Shop Management → Set Item Prices
+   - Enter item name and new price
 
 #### View Statistics
 - Main Menu → View Statistics
@@ -391,10 +396,11 @@ The system uses a two-phase organization algorithm:
 - Run server again to rescan
 
 ### Shop Items Not Appearing
-1. Verify items in STORAGE chests
-2. Check items added to catalog (matching exact item ID)
-3. Process INPUT chests via management console
-4. Check stock levels (SHOP_BROWSE shows live stock)
+1. Verify items physically in STORAGE chests
+2. Rescan STORAGE chests via management console
+3. Check that prices are set (price must be > 0)
+4. View Shop Catalog to see detected item names
+5. Ensure item name matches exactly (e.g., `minecraft:diamond`)
 
 ### Void Chest Delivery Not Working
 - Verify void chest frequency matches server
@@ -432,7 +438,8 @@ cc-bank/
 ├── server/                 # Server component
 │   ├── main.lua            # Server main loop
 │   ├── accounts.lua        # Account management
-│   ├── catalog.lua         # Shop catalog
+│   ├── catalog.lua         # Manual shop catalog (legacy)
+│   ├── shop_catalog.lua    # Auto-scanning shop catalog
 │   ├── transactions.lua    # Transaction logging
 │   └── network_storage.lua # Peripheral storage management
 │
@@ -445,7 +452,8 @@ cc-bank/
 └── data/                   # Runtime data (auto-created)
     ├── accounts.json       # Account database
     ├── transactions.json   # Transaction history
-    ├── catalog.json        # Shop catalog
+    ├── catalog.json        # Manual catalog (legacy)
+    ├── shop_catalog_cache.dat # Auto-scanned catalog cache
     ├── config.json         # Saved configuration
     └── sessions.json       # Active sessions
 ```
@@ -463,6 +471,14 @@ cc-bank/
 MIT License - See LICENSE file for details
 
 ## Version History
+
+### v2.1 - Auto-Scanning Shop System
+- **Auto-scanning catalog**: Items automatically detected from STORAGE chests
+- **Inspired by CC-STR**: Simple workflow like popular storage systems
+- **No manual entry**: Just place items, rescan, set prices
+- **Cache system**: Fast performance with automatic caching
+- **Easy price management**: Simple interface to set prices for detected items
+- **Account unlocking**: Management console can unlock locked accounts
 
 ### v2.0 - Digital Banking Release
 - Complete redesign: Digital-only banking (no physical currency)
