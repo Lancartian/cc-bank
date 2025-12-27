@@ -11,6 +11,7 @@ local catalog = {}
 local itemCatalog = {}  -- {itemName = {displayName, totalStock, price, locations = {chestName = count}}}
 local cacheValid = false
 local lastScanTime = 0
+local isScanning = false  -- Prevent concurrent scans
 local CACHE_FILE = "shop_catalog_cache.dat"
 
 -- Dependencies (lazy loaded to avoid circular dependencies)
@@ -70,16 +71,32 @@ function catalog.initialize()
         local storageChests = storage.getStorageChests()
         if #storageChests > 0 then
             -- Cache is potentially valid
+            print("[SHOP CATALOG] Loaded from cache: " .. catalog.getItemCount() .. " items")
             return true
         end
     end
     
     -- Cache not available or invalid, do full scan
-    return catalog.rescan()
+    print("[SHOP CATALOG] Cache invalid, performing full scan")
+    local success, result = pcall(catalog.rescan)
+    
+    if not success then
+        print("[SHOP CATALOG] Error during scan: " .. tostring(result))
+        isScanning = false  -- Reset flag on error
+        return false
+    end
+    
+    return result
 end
 
 -- Scan all STORAGE chests and build catalog
 function catalog.rescan()
+    if isScanning then
+        print("[SHOP CATALOG] Scan already in progress, skipping")
+        return false
+    end
+    
+    isScanning = true
     print("[SHOP CATALOG] Starting rescan...")
     itemCatalog = {}
     local storage = getNetworkStorage()
@@ -88,7 +105,8 @@ function catalog.rescan()
     local storageChests = storage.getStorageChests()
     print("[SHOP CATALOG] Found " .. #storageChests .. " STORAGE chests")
     
-    if #storageChests == 0 then
+    if #isScanning = false
+        storageChests == 0 then
         -- No storage chests found, but this is OK - empty catalog
         print("[SHOP CATALOG] No STORAGE chests found, creating empty catalog")
         cacheValid = true
@@ -98,22 +116,25 @@ function catalog.rescan()
     end
     
     -- Scan each STORAGE chest
-    for _, chestInfo in ipairs(storageChests) do
+    for chestIndex, chestInfo in ipairs(storageChests) do
+        print("[SHOP CATALOG] Scanning chest " .. chestIndex .. "/" .. #storageChests .. ": " .. chestInfo.name)
         local chest = chestInfo.peripheral  -- Already wrapped
         if chest and chest.list then
-            local items = chest.list()
+            local success, items = pcall(function() return chest.list() end)
             
-            -- Check if list() returned valid data
-            if items and type(items) == "table" then
+            -- Check if list() succeeded and returned valid data
+            if success and items and type(items) == "table" then
+                local itemCount = 0
                 for slot, item in pairs(items) do
                     -- Validate item data
                     if item and item.name and item.count then
+                        itemCount = itemCount + 1
                         local shouldSkip = false
                         
                         -- Skip STORAGE marker papers specifically
                         if item.name == "minecraft:paper" then
-                            local detail = chest.getItemDetail(slot)
-                            if detail and detail.displayName and detail.displayName == "STORAGE" then
+                            local detailSuccess, detail = pcall(function() return chest.getItemDetail(slot) end)
+                            if detailSuccess and detail and detail.displayName and detail.displayName == "STORAGE" then
                                 shouldSkip = true
                             end
                         end
@@ -142,26 +163,30 @@ function catalog.rescan()
                         end
                     end
                 end
+                print("[SHOP CATALOG] Scanned " .. itemCount .. " items from " .. chestInfo.name)
+            else
+                print("[SHOP CATALOG] Failed to list items from " .. chestInfo.name)
             end
         end
     end
     
     -- Get display names for items
+    print("[SHOP CATALOG] Fetching display names for " .. catalog.getItemCount() .. " unique items")
     for itemName, itemData in pairs(itemCatalog) do
         -- Try to get detailed info from first location
         for chestName, _ in pairs(itemData.locations) do
             -- Validate chestName is a string
             if type(chestName) == "string" then
                 -- chestName is already a string peripheral name
-                local chest = peripheral.wrap(chestName)
-                if chest and chest.list then
-                    local items = chest.list()
+                local wrapSuccess, chest = pcall(function() return peripheral.wrap(chestName) end)
+                if wrapSuccess and chest and chest.list then
+                    local listSuccess, items = pcall(function() return chest.list() end)
                     -- Check if list() returned valid data
-                    if items and type(items) == "table" then
+                    if listSuccess and items and type(items) == "table" then
                         for slot, item in pairs(items) do
                             if item and item.name == itemName then
-                                local detail = chest.getItemDetail(slot)
-                                if detail and detail.displayName then
+                                local detailSuccess, detail = pcall(function() return chest.getItemDetail(slot) end)
+                                if detailSuccess and detail and detail.displayName then
                                     itemData.displayName = detail.displayName
                                     break
                                 end
@@ -180,6 +205,7 @@ function catalog.rescan()
     print("[SHOP CATALOG] Scan complete. Items: " .. catalog.getItemCount() .. ", Stock: " .. catalog.getTotalStock())
     cacheValid = true
     lastScanTime = os.epoch("utc")
+    isScanning = false
     saveCache()
     
     return true
@@ -187,6 +213,12 @@ end
 
 -- Get all catalog items
 function catalog.getAll()
+    -- Don't try to initialize if already scanning
+    if not cacheValid and not isScanning then
+        print("[SHOP CATALOG] Cache not valid, attempting initialization")
+        catalog.initialize()
+    end
+    
     local items = {}
     for itemName, itemData in pairs(itemCatalog) do
         table.insert(items, {

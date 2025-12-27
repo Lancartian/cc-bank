@@ -101,7 +101,16 @@ accounts.load()
 transactions.load()
 catalog.load()
 networkStorage.initialize()
-shopCatalog.initialize()
+
+-- Initialize shop catalog with error handling
+local catalogSuccess, catalogErr = pcall(function()
+    shopCatalog.initialize()
+end)
+
+if not catalogSuccess then
+    print("[WARNING] Shop catalog initialization failed: " .. tostring(catalogErr))
+    print("[INFO] Shop catalog will be empty until manual rescan")
+end
 
 print("Accounts loaded: " .. #accounts.list())
 print("Transactions loaded: " .. transactions.getStats().totalTransactions)

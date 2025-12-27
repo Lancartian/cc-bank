@@ -867,6 +867,77 @@ unlockAccBackBtn.onClick = function()
 end
 unlockAccountScreen:addChild(unlockAccBackBtn)
 
+-- Reset Password screen
+local resetPasswordScreen = sgl.Panel:new(2, 2, 47, 15)
+resetPasswordScreen:setBorder(false)
+resetPasswordScreen:setVisible(false)
+resetPasswordScreen.data = {isScreen = true, screenName = "resetPassword"}
+root:addChild(resetPasswordScreen)
+
+local resetPassTitle = sgl.Label:new(10, 1, "Reset Account Password", 43)
+resetPassTitle.style.fgColor = colors.yellow
+resetPasswordScreen:addChild(resetPassTitle)
+
+local resetPassUsernameLabel = sgl.Label:new(3, 4, "Username:", 20)
+resetPasswordScreen:addChild(resetPassUsernameLabel)
+
+local resetPassUsernameInput = sgl.Input:new(3, 5, 25, 1)
+resetPasswordScreen:addChild(resetPassUsernameInput)
+
+local resetPassNewLabel = sgl.Label:new(3, 7, "New Password:", 20)
+resetPasswordScreen:addChild(resetPassNewLabel)
+
+local resetPassNewInput = sgl.Input:new(3, 8, 25, 1)
+resetPassNewInput:setMasked(true)
+resetPasswordScreen:addChild(resetPassNewInput)
+
+local resetPassStatusLabel = sgl.Label:new(3, 10, "", 43)
+resetPasswordScreen:addChild(resetPassStatusLabel)
+
+local resetPassBtn = sgl.Button:new(3, 12, 20, 1, "Reset Password")
+resetPassBtn.style.bgColor = colors.blue
+resetPassBtn.onClick = function()
+    local username = resetPassUsernameInput:getText()
+    local newPassword = resetPassNewInput:getText()
+    
+    if not username or username == "" then
+        resetPassStatusLabel:setText("Please enter a username")
+        resetPassStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    if not newPassword or newPassword == "" then
+        resetPassStatusLabel:setText("Please enter a new password")
+        resetPassStatusLabel.style.fgColor = colors.red
+        root:markDirty()
+        return
+    end
+    
+    local result, err = sendToServer(network.MSG.ACCOUNT_RESET_PASSWORD, {
+        username = username,
+        newPassword = newPassword
+    })
+    
+    if result then
+        resetPassStatusLabel:setText("Password reset successfully!")
+        resetPassStatusLabel.style.fgColor = colors.green
+        resetPassUsernameInput:setText("")
+        resetPassNewInput:setText("")
+    else
+        resetPassStatusLabel:setText("Error: " .. tostring(err))
+        resetPassStatusLabel.style.fgColor = colors.red
+    end
+    root:markDirty()
+end
+resetPasswordScreen:addChild(resetPassBtn)
+
+local resetPassBackBtn = sgl.Button:new(25, 12, 15, 1, "Back")
+resetPassBackBtn.onClick = function()
+    showScreen("accounts")
+end
+resetPasswordScreen:addChild(resetPassBackBtn)
+
 -- Determine initial screen and focus
 if not config.management.masterPasswordHash then
     -- First run - show setup
