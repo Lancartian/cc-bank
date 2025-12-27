@@ -307,6 +307,13 @@ unlockAccBtn.onClick = function()
 end
 accountsScreen:addChild(unlockAccBtn)
 
+local resetPassBtn = sgl.Button:new(3, 9, 38, 2, "Reset Account Password")
+resetPassBtn.style.bgColor = colors.blue
+resetPassBtn.onClick = function()
+    showScreen("resetPassword")
+end
+accountsScreen:addChild(resetPassBtn)
+
 local accountsBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
 accountsBackBtn.onClick = function()
     showScreen("main")

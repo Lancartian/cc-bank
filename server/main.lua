@@ -398,6 +398,33 @@ handlers[network.MSG.ACCOUNT_UNLOCK] = function(message, sender)
     return network.successResponse({message = "Account unlocked successfully"})
 end
 
+-- Reset account password (Management only)
+handlers[network.MSG.ACCOUNT_RESET_PASSWORD] = function(message, sender)
+    -- Require management authentication
+    local mgmtSession, err = validateManagementSession(message.token)
+    if not mgmtSession then
+        return network.errorResponse("unauthorized", err or "Management authentication required")
+    end
+    
+    if not message.data.username or not message.data.newPassword then
+        return network.errorResponse("missing_fields", "Username and new password required")
+    end
+    
+    -- Get account number from username
+    local accountNumber = accounts.getAccountNumber(message.data.username)
+    if not accountNumber then
+        return network.errorResponse("account_not_found", "Account not found")
+    end
+    
+    local success, err = accounts.resetPassword(accountNumber, message.data.newPassword)
+    
+    if not success then
+        return network.errorResponse("reset_failed", err or "Failed to reset password")
+    end
+    
+    return network.successResponse({message = "Password reset successfully"})
+end
+
 -- Balance check
 handlers[network.MSG.BALANCE_CHECK] = function(message, sender)
     -- Check nonce

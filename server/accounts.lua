@@ -301,4 +301,30 @@ function accounts.getAccountNumber(username)
     return accountIndex[username]
 end
 
+-- Reset account password (management function)
+function accounts.resetPassword(accountNumber, newPassword)
+    local account = accountData[accountNumber]
+    if not account then
+        return false, "invalid_account"
+    end
+    
+    -- Validate password
+    if #newPassword < config.security.minPasswordLength then
+        return false, "password_too_short"
+    end
+    
+    -- Hash new password
+    local passwordData = crypto.hashPassword(newPassword)
+    account.passwordHash = passwordData.hash
+    account.passwordSalt = passwordData.salt
+    
+    -- Also unlock account and reset failed attempts
+    account.locked = false
+    account.failedAttempts = 0
+    account.lockoutUntil = nil
+    
+    accounts.save()
+    return true, nil
+end
+
 return accounts
