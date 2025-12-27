@@ -329,6 +329,7 @@ local serverFiles = {
     "server/main.lua",
     "server/accounts.lua",
     "server/catalog.lua",
+    "server/shop_catalog.lua",
     "server/transactions.lua",
     "server/network_storage.lua"
 }
