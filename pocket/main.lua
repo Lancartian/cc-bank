@@ -111,6 +111,10 @@ local function showLogin()
         
         statusLabel.style.fgColor = colors.yellow
         statusLabel:setText("Authenticating...")
+        root:markDirty()
+        
+        -- Yield to let SGL render the status update
+        sleep(0)
         
         -- Send plain password (will be encrypted by network layer)
         local response, err = sendToServer(network.MSG.AUTH_REQUEST, {
