@@ -372,13 +372,9 @@ local catalogInfoLabel = sgl.Label:new(2, 2, "", 43)
 catalogInfoLabel.style.fgColor = colors.gray
 shopCatalogScreen:addChild(catalogInfoLabel)
 
-local catalogListLabels = {}
-for i = 1, 9 do
-    local label = sgl.Label:new(2, 3 + i, "", 43)
-    label.style.fgColor = colors.white
-    shopCatalogScreen:addChild(label)
-    catalogListLabels[i] = label
-end
+-- Use a scrollable list for shop catalog
+local catalogListWidget = sgl.List:new(2, 3, 43, 9)
+shopCatalogScreen:addChild(catalogListWidget)
 
 local function refreshCatalog()
     catalogInfoLabel:setText("Loading...")
@@ -390,22 +386,15 @@ local function refreshCatalog()
         catalogInfoLabel:setText(string.format("Items: %d | Total Stock: %d", 
             result.totalItems or 0, result.totalStock or 0))
         catalogInfoLabel.style.fgColor = colors.gray
-        
-        for i = 1, 9 do
-            if result.items[i] then
-                local item = result.items[i]
-                local priceText = item.price > 0 and ("$" .. item.price) or "[No price]"
-                catalogListLabels[i]:setText(string.format("%s - %s (x%d)",
-                    item.displayName, priceText, item.stock))
-                catalogListLabels[i].style.fgColor = item.price > 0 and colors.white or colors.gray
-            else
-                catalogListLabels[i]:setText("")
-            end
+        local listItems = {}
+        for _, item in ipairs(result.items) do
+            local priceText = item.price and item.price > 0 and ("$" .. item.price) or "[No price]"
+            table.insert(listItems, string.format("%s - %s (x%d)", item.displayName, priceText, item.stock))
         end
-        
-        if result.totalItems == 0 then
-            catalogListLabels[1]:setText("No items in STORAGE chests")
-            catalogListLabels[1].style.fgColor = colors.gray
+        if #listItems == 0 then
+            catalogListWidget.items = {"No items in STORAGE chests"}
+        else
+            catalogListWidget.items = listItems
         end
     else
         catalogInfoLabel:setText("Error: " .. tostring(err))
@@ -767,37 +756,28 @@ local listAccTitle = sgl.Label:new(10, 1, "Account List", 43)
 listAccTitle.style.fgColor = colors.yellow
 listAccountsScreen:addChild(listAccTitle)
 
-local accountListLabels = {}
-for i = 1, 10 do
-    local label = sgl.Label:new(2, 2 + i, "", 43)
-    label.style.fgColor = colors.white
-    listAccountsScreen:addChild(label)
-    accountListLabels[i] = label
-end
+-- Use a scrollable list for accounts
+local accountListWidget = sgl.List:new(2, 3, 43, 10)
+listAccountsScreen:addChild(accountListWidget)
 
 -- Function to refresh account list
 local function refreshAccountList()
     local result, err = sendToServer(network.MSG.ACCOUNT_LIST, {})
     
     if result and result.accounts then
-        for i = 1, 10 do
-            if result.accounts[i] then
-                local acc = result.accounts[i]
-                local lockStatus = acc.locked and " [LOCKED]" or ""
-                accountListLabels[i]:setText(acc.username .. " (#" .. acc.accountNumber .. ") - " .. acc.balance .. " Credits" .. lockStatus)
-                accountListLabels[i].style.fgColor = acc.locked and colors.red or colors.white
-            else
-                accountListLabels[i]:setText("")
-            end
+        local items = {}
+        for _, acc in ipairs(result.accounts) do
+            local lockStatus = acc.locked and " [LOCKED]" or ""
+            table.insert(items, acc.username .. " (#" .. acc.accountNumber .. ") - " .. acc.balance .. " Credits" .. lockStatus)
         end
-        
-        if #result.accounts == 0 then
-            accountListLabels[1]:setText("No accounts found")
-            accountListLabels[1].style.fgColor = colors.gray
+        if #items == 0 then
+            accountListWidget.items = {"No accounts found"}
+            accountListWidget.style = accountListWidget.style or {}
+        else
+            accountListWidget.items = items
         end
     else
-        accountListLabels[1]:setText("Error loading accounts")
-        accountListLabels[1].style.fgColor = colors.red
+        accountListWidget.items = {"Error loading accounts: " .. tostring(err)}
     end
     root:markDirty()
 end

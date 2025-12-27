@@ -56,6 +56,8 @@ end
 
 -- Forward declarations for screen functions (order matters for cross-references)
 local showLogin, showMenu, showShop, showTransfer, showPurchase
+-- Reference to active shop list for background refresh
+local pocketItemList = nil
 
 local function clearScreen()
     -- Remove all children from root panel
@@ -291,6 +293,8 @@ showShop = function()
                     end
                 end
                 root:addChild(itemList)
+                -- Save reference for background refresher
+                pocketItemList = {widget = itemList, data = itemData}
             end
         end
     else
@@ -466,4 +470,34 @@ end
 showLogin()
 
 -- Run the application
-app:run()
+-- Run the application alongside a background refresher that updates the shop catalog every second
+local function runApp()
+    app:run()
+end
+
+local function backgroundRefresher()
+    while true do
+        if currentScreen == "shop" and pocketItemList and pocketItemList.widget then
+            local success, response = pcall(function()
+                return sendToServer(network.MSG.SHOP_GET_CATALOG, {}, true)
+            end)
+            if success and response and response.type == network.MSG.SUCCESS then
+                local items = response.data.items or {}
+                local itemNames = {}
+                local itemData = {}
+                for i, item in ipairs(items) do
+                    if item.price and item.price > 0 then
+                        table.insert(itemNames, item.displayName .. " - $" .. item.price .. " (x" .. item.stock .. ")")
+                        itemData[#itemNames] = item
+                    end
+                end
+                pocketItemList.data = itemData
+                pocketItemList.widget.items = itemNames
+                root:markDirty()
+            end
+        end
+        sleep(1)
+    end
+end
+
+parallel.waitForAny(runApp, backgroundRefresher)
