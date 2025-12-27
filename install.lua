@@ -208,6 +208,12 @@ if not isUpdate then
         end
     end
     
+    -- Remove data directory (accounts, master password, etc.)
+    if fs.exists("/data") then
+        print("  Removing: /data (accounts and settings will be reset)")
+        fs.delete("/data")
+    end
+    
     print("Cleanup complete!")
     print("")
 end
