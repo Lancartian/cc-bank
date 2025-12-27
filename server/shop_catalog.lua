@@ -103,37 +103,40 @@ function catalog.rescan()
             -- Check if list() returned valid data
             if items and type(items) == "table" then
                 for slot, item in pairs(items) do
-                    local shouldSkip = false
-                    
-                    -- Skip STORAGE marker papers specifically
-                    if item.name == "minecraft:paper" then
-                        local detail = chest.getItemDetail(slot)
-                        if detail and detail.displayName and detail.displayName == "STORAGE" then
-                            shouldSkip = true
-                        end
-                    end
-                    
-                    if not shouldSkip then
-                        -- Initialize item entry if needed
-                        if not itemCatalog[item.name] then
-                            itemCatalog[item.name] = {
-                                name = item.name,
-                                displayName = nil,
-                                totalStock = 0,
-                                price = 0,  -- Default price, can be set by management console
-                                locations = {}
-                            }
+                    -- Validate item data
+                    if item and item.name and item.count then
+                        local shouldSkip = false
+                        
+                        -- Skip STORAGE marker papers specifically
+                        if item.name == "minecraft:paper" then
+                            local detail = chest.getItemDetail(slot)
+                            if detail and detail.displayName and detail.displayName == "STORAGE" then
+                                shouldSkip = true
+                            end
                         end
                         
-                        -- Add to total stock
-                        itemCatalog[item.name].totalStock = itemCatalog[item.name].totalStock + item.count
-                        
-                        -- Track location (use string name as key)
-                        if not itemCatalog[item.name].locations[chestInfo.name] then
-                            itemCatalog[item.name].locations[chestInfo.name] = 0
+                        if not shouldSkip then
+                            -- Initialize item entry if needed
+                            if not itemCatalog[item.name] then
+                                itemCatalog[item.name] = {
+                                    name = item.name,
+                                    displayName = nil,
+                                    totalStock = 0,
+                                    price = 0,  -- Default price, can be set by management console
+                                    locations = {}
+                                }
+                            end
+                            
+                            -- Add to total stock
+                            itemCatalog[item.name].totalStock = itemCatalog[item.name].totalStock + item.count
+                            
+                            -- Track location (use string name as key)
+                            if not itemCatalog[item.name].locations[chestInfo.name] then
+                                itemCatalog[item.name].locations[chestInfo.name] = 0
+                            end
+                            itemCatalog[item.name].locations[chestInfo.name] = 
+                                itemCatalog[item.name].locations[chestInfo.name] + item.count
                         end
-                        itemCatalog[item.name].locations[chestInfo.name] = 
-                            itemCatalog[item.name].locations[chestInfo.name] + item.count
                     end
                 end
             end
@@ -144,16 +147,22 @@ function catalog.rescan()
     for itemName, itemData in pairs(itemCatalog) do
         -- Try to get detailed info from first location
         for chestName, _ in pairs(itemData.locations) do
-            -- chestName is already a string peripheral name
-            local chest = peripheral.wrap(chestName)
-            if chest and chest.list then
-                local items = chest.list()
-                for slot, item in pairs(items) do
-                    if item.name == itemName then
-                        local detail = chest.getItemDetail(slot)
-                        if detail and detail.displayName then
-                            itemData.displayName = detail.displayName
-                            break
+            -- Validate chestName is a string
+            if type(chestName) == "string" then
+                -- chestName is already a string peripheral name
+                local chest = peripheral.wrap(chestName)
+                if chest and chest.list then
+                    local items = chest.list()
+                    -- Check if list() returned valid data
+                    if items and type(items) == "table" then
+                        for slot, item in pairs(items) do
+                            if item and item.name == itemName then
+                                local detail = chest.getItemDetail(slot)
+                                if detail and detail.displayName then
+                                    itemData.displayName = detail.displayName
+                                    break
+                                end
+                            end
                         end
                     end
                 end

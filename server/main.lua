@@ -641,21 +641,29 @@ handlers[network.MSG.SHOP_GET_CATALOG] = function(message, sender)
         return network.errorResponse("session_error", err)
     end
     
-    local searchTerm = message.data and message.data.search
-    local items
+    local success, result = pcall(function()
+        local searchTerm = message.data and message.data.search
+        local items
+        
+        if searchTerm then
+            items = shopCatalog.search(searchTerm)
+        else
+            items = shopCatalog.getAll()
+        end
+        
+        return {
+            items = items,
+            totalItems = shopCatalog.getItemCount(),
+            totalStock = shopCatalog.getTotalStock(),
+            lastScan = shopCatalog.getLastScanTime()
+        }
+    end)
     
-    if searchTerm then
-        items = shopCatalog.search(searchTerm)
-    else
-        items = shopCatalog.getAll()
+    if not success then
+        return network.errorResponse("scan_error", "Failed to get catalog: " .. tostring(result))
     end
     
-    return network.successResponse({
-        items = items,
-        totalItems = shopCatalog.getItemCount(),
-        totalStock = shopCatalog.getTotalStock(),
-        lastScan = shopCatalog.getLastScanTime()
-    })
+    return network.successResponse(result)
 end
 
 -- Shop Catalog - Set item price (Management only)
@@ -721,17 +729,25 @@ handlers[network.MSG.SHOP_RESCAN] = function(message, sender)
         return network.errorResponse("unauthorized", err or "Management access required")
     end
     
-    local success = shopCatalog.rescan()
+    local success, result = pcall(function()
+        local scanSuccess = shopCatalog.rescan()
+        if not scanSuccess then
+            error("Failed to rescan storage chests")
+        end
+        
+        return {
+            message = "Storage rescanned successfully",
+            totalItems = shopCatalog.getItemCount(),
+            totalStock = shopCatalog.getTotalStock(),
+            lastScan = shopCatalog.getLastScanTime()
+        }
+    end)
+    
     if not success then
-        return network.errorResponse("rescan_failed", "Failed to rescan storage chests")
+        return network.errorResponse("rescan_failed", tostring(result))
     end
     
-    return network.successResponse({
-        message = "Storage rescanned successfully",
-        totalItems = shopCatalog.getItemCount(),
-        totalStock = shopCatalog.getTotalStock(),
-        lastScan = shopCatalog.getLastScanTime()
-    })
+    return network.successResponse(result)
 end
 
 -- Transfer

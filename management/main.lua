@@ -41,7 +41,9 @@ local function sendToServer(msgType, data)
     local message = network.createMessage(msgType, data, managementToken)
     network.broadcast(modem, config.server.port, message)
     
-    local response, err = network.receive(config.management.port, 5)
+    -- Use longer timeout (15 seconds) for shop catalog operations which may need to scan
+    local timeout = (msgType == network.MSG.SHOP_GET_CATALOG or msgType == network.MSG.SHOP_RESCAN) and 15 or 5
+    local response, err = network.receive(config.management.port, timeout)
     if not response then
         return nil, err or "No response from server"
     end
