@@ -115,96 +115,25 @@ showLogin = function()
         statusLabel.style.fgColor = colors.yellow
         statusLabel:setText("Authenticating...")
         
-        -- Debug: Log the request
-        local f = fs.open("/auth_request_debug.txt", "w")
-        if f then
-            f.writeLine("Sending AUTH_REQUEST")
-            f.writeLine("Username: " .. user)
-            f.writeLine("Password length: " .. #pass)
-            f.writeLine("Listening on port: " .. config.pocket.port)
-            f.close()
-        end
-        
         -- Send plain password (will be encrypted by network layer)
         local response, err = sendToServer(network.MSG.AUTH_REQUEST, {
             username = user,
             password = pass
         }, true)
         
-        -- Debug: Log the response
-        f = fs.open("/auth_response_debug.txt", "w")
-        if f then
-            f.writeLine("Response received: " .. tostring(response ~= nil))
-            if response then
-                f.writeLine("Response type: " .. tostring(response.type))
-                f.writeLine("Has data: " .. tostring(response.data ~= nil))
-                if response.data then
-                    f.writeLine("data.encrypted: " .. tostring(response.data.encrypted ~= nil))
-                    f.writeLine("data.isEncrypted: " .. tostring(response.data.isEncrypted))
-                end
-            else
-                f.writeLine("Error: " .. tostring(err))
-            end
-            f.close()
-        end
-        
         if response and response.type == network.MSG.AUTH_RESPONSE then
-            f = fs.open("/auth_processing_debug.txt", "w")
-            if f then
-                f.writeLine("Processing AUTH_RESPONSE")
-                f.writeLine("Checking data.encrypted...")
-                f.close()
-            end
-            
             if response.data.encrypted then
-                local f2 = fs.open("/auth_decrypt_debug.txt", "w")
-                if f2 then
-                    f2.writeLine("Decrypting response...")
-                    f2.close()
-                end
-                
                 local decrypted = crypto.base64Decode(response.data.encrypted)
                 local decryptedData = crypto.decrypt(decrypted, encryptionKey)
                 local authData = textutils.unserialiseJSON(decryptedData)
                 
-                local f3 = fs.open("/auth_data_debug.txt", "w")
-                if f3 then
-                    f3.writeLine("Auth data parsed: " .. tostring(authData ~= nil))
-                    if authData then
-                        f3.writeLine("Has token: " .. tostring(authData.token ~= nil))
-                        f3.writeLine("Has accountNumber: " .. tostring(authData.accountNumber ~= nil))
-                        f3.writeLine("Has balance: " .. tostring(authData.balance ~= nil))
-                    end
-                    f3.close()
-                end
-                
                 if authData and authData.token then
-                    local f4 = fs.open("/auth_success_debug.txt", "w")
-                    if f4 then
-                        f4.writeLine("Setting session data...")
-                        f4.close()
-                    end
-                    
                     sessionToken = authData.token
                     accountNumber = authData.accountNumber
                     username = user
                     balance = authData.balance or 0
                     
-                    local f5 = fs.open("/auth_menu_debug.txt", "w")
-                    if f5 then
-                        f5.writeLine("About to call showMenu()")
-                        f5.writeLine("Current screen: " .. currentScreen)
-                        f5.close()
-                    end
-                    
                     showMenu()
-                    
-                    local f6 = fs.open("/auth_complete_debug.txt", "w")
-                    if f6 then
-                        f6.writeLine("showMenu() returned")
-                        f6.writeLine("Current screen: " .. currentScreen)
-                        f6.close()
-                    end
                 else
                     statusLabel.style.fgColor = colors.red
                     statusLabel:setText("Authentication failed")
@@ -240,39 +169,12 @@ end
 
 -- Main Menu Screen
 showMenu = function()
-    local f = fs.open("/showmenu_debug.txt", "w")
-    if f then
-        f.writeLine("showMenu() started")
-        f.close()
-    end
-    
     clearScreen()
-    
-    f = fs.open("/showmenu_debug.txt", "a")
-    if f then
-        f.writeLine("clearScreen() completed")
-        f.close()
-    end
-    
     currentScreen = "menu"
-    
-    f = fs.open("/showmenu_debug.txt", "a")
-    if f then
-        f.writeLine("Creating title label...")
-        f.writeLine("username: " .. tostring(username))
-        f.close()
-    end
     
     local title = sgl.Label:new(2, 1, username, w - 2)
     title.style.fgColor = colors.yellow
     root:addChild(title)
-    
-    f = fs.open("/showmenu_debug.txt", "a")
-    if f then
-        f.writeLine("Title added, creating balance label...")
-        f.writeLine("balance: " .. tostring(balance))
-        f.close()
-    end
     
     local balanceLabel = sgl.Label:new(2, 2, "Balance: $" .. balance, w - 2)
     balanceLabel.style.fgColor = colors.lime
@@ -296,19 +198,7 @@ showMenu = function()
     end
     root:addChild(logoutBtn)
     
-    f = fs.open("/showmenu_debug.txt", "a")
-    if f then
-        f.writeLine("All buttons added, marking dirty...")
-        f.close()
-    end
-    
     root:markDirty()
-    
-    f = fs.open("/showmenu_debug.txt", "a")
-    if f then
-        f.writeLine("showMenu() complete!")
-        f.close()
-    end
 end
 
 -- Shop Screen
