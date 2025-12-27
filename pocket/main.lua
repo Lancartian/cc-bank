@@ -43,7 +43,8 @@ local function sendToServer(msgType, data, waitForResponse)
     network.broadcast(modem, config.server.port, message)
     
     if waitForResponse then
-        local response, distance = network.receive(config.pocket.port or network.PORT_POCKET, 5)
+        local timeout = (msgType == network.MSG.SHOP_GET_CATALOG or msgType == network.MSG.SHOP_RESCAN) and 15 or 5
+        local response, distance = network.receive(config.pocket.port or network.PORT_POCKET, timeout)
         if response then
             return response, nil
         else
