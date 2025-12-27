@@ -263,14 +263,6 @@ end
 
 -- Authentication
 handlers[network.MSG.AUTH_REQUEST] = function(message, sender)
-    -- Debug logging
-    local debugFile = fs.open("/auth_debug.txt", "a")
-    if debugFile then
-        debugFile.writeLine(os.epoch("utc") .. ": AUTH_REQUEST received")
-        debugFile.writeLine("  isEncrypted: " .. tostring(message.data.isEncrypted))
-        debugFile.close()
-    end
-    
     -- Check nonce to prevent replay attacks
     local nonceValid, nonceErr = checkNonce(message.nonce, message.timestamp)
     if not nonceValid then
@@ -294,35 +286,15 @@ handlers[network.MSG.AUTH_REQUEST] = function(message, sender)
         -- Parse JSON
         local success, decryptedData = pcall(textutils.unserialiseJSON, decrypted)
         if not success or not decryptedData then
-            debugFile = fs.open("/auth_debug.txt", "a")
-            if debugFile then
-                debugFile.writeLine("  Decryption/parsing failed: " .. tostring(decryptedData))
-                debugFile.close()
-            end
             return network.errorResponse("decryption_failed", "Could not decrypt credentials")
         end
         
         username = decryptedData.username
         password = decryptedData.password
-        
-        -- Debug: log decrypted values
-        debugFile = fs.open("/auth_debug.txt", "a")
-        if debugFile then
-            debugFile.writeLine("  Decrypted username: " .. tostring(username))
-            debugFile.writeLine("  Decrypted password length: " .. tostring(#tostring(password or "")))
-            debugFile.close()
-        end
     else
         -- Fallback for unencrypted (should not happen in production)
         username = message.data.username
         password = message.data.password
-        
-        debugFile = fs.open("/auth_debug.txt", "a")
-        if debugFile then
-            debugFile.writeLine("  Unencrypted username: " .. tostring(username))
-            debugFile.writeLine("  Unencrypted password length: " .. tostring(#tostring(password or "")))
-            debugFile.close()
-        end
     end
     
     if not username or not password then
@@ -330,13 +302,6 @@ handlers[network.MSG.AUTH_REQUEST] = function(message, sender)
     end
     
     local accountNumber, err = accounts.authenticate(username, password)
-    
-    -- Debug: log authentication result
-    debugFile = fs.open("/auth_debug.txt", "a")
-    if debugFile then
-        debugFile.writeLine("  Auth result: " .. tostring(accountNumber or err))
-        debugFile.close()
-    end
     
     if not accountNumber then
         return network.errorResponse("auth_failed", err or "Authentication failed")

@@ -99,13 +99,6 @@ local function showLogin()
     
     local loginBtn = sgl.Button:new(2, 10, w - 2, 3, "Login")
     loginBtn.onClick = function()
-        -- Debug: write to log file to confirm onClick is firing
-        local f = fs.open("/login_debug.txt", "a")
-        if f then
-            f.writeLine(os.epoch("utc") .. ": Login button clicked")
-            f.close()
-        end
-        
         local user = usernameInput:getText() or ""
         local pass = passwordInput:getText() or ""
         
@@ -118,11 +111,6 @@ local function showLogin()
         
         statusLabel.style.fgColor = colors.yellow
         statusLabel:setText("Authenticating...")
-        root:markDirty()
-        
-        -- Let the UI update before blocking on network call
-        os.queueEvent("dummy")
-        os.pullEvent("dummy")
         
         -- Send plain password (will be encrypted by network layer)
         local response, err = sendToServer(network.MSG.AUTH_REQUEST, {
