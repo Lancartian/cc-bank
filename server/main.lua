@@ -135,6 +135,40 @@ local function createSession(accountNumber)
     return token
 end
 
+-- Broadcast current catalog to pockets and management consoles
+local function broadcastCatalog()
+    local items = shopCatalog.getAll()
+    local data = {
+        items = items,
+        totalItems = shopCatalog.getItemCount(),
+        totalStock = shopCatalog.getTotalStock(),
+        lastScan = shopCatalog.getLastScanTime()
+    }
+
+    -- Build message once
+    local msg = network.createMessage(network.MSG.SHOP_GET_CATALOG, data)
+
+    -- Broadcast to pocket clients
+    local pocketPort = config.pocket.port or config.server.port
+    network.broadcast(modem, pocketPort, msg)
+
+    -- Broadcast to management consoles
+    network.broadcast(modem, config.management.port, msg)
+end
+
+-- Background loop: automatically rescan STORAGE chests every 10 seconds
+local function catalogRescanLoop()
+    while true do
+        local ok, res = pcall(function() return shopCatalog.rescan() end)
+        if ok and res then
+            -- After a successful rescan, broadcast updated catalog
+            pcall(broadcastCatalog)
+        end
+        -- Always wait 10 seconds between attempts
+        sleep(10)
+    end
+end
+
 local function validateSession(token)
     local session = sessions[token]
     if not session then
@@ -962,4 +996,5 @@ end
 
 -- Start server
 print("\n=== Server started ===\n")
-serverLoop()
+-- Run server loop alongside automatic catalog rescan loop
+parallel.waitForAny(serverLoop, catalogRescanLoop)
