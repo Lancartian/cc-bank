@@ -191,7 +191,7 @@ if not isUpdate then
     print("Fresh install: Cleaning up old files...")
     
     -- Remove all program directories
-    local cleanupDirs = {"/lib", "/server", "/management", "/pocket"}
+    local cleanupDirs = {"/lib", "/server", "/management", "/pocket", "/shop"}
     for _, dir in ipairs(cleanupDirs) do
         if fs.exists(dir) then
             print("  Removing: " .. dir)
@@ -200,7 +200,11 @@ if not isUpdate then
     end
     
     -- Remove root files
-    local cleanupFiles = {"config.lua", "startup.lua"}
+    local cleanupFiles = {
+        "config.lua",
+        "config.json",
+        "startup.lua"
+    }
     for _, file in ipairs(cleanupFiles) do
         if fs.exists(file) then
             print("  Removing: " .. file)
@@ -212,6 +216,20 @@ if not isUpdate then
     if fs.exists("/data") then
         print("  Removing: /data (accounts and settings will be reset)")
         fs.delete("/data")
+    end
+    
+    -- Remove debug and log files
+    local debugFiles = {
+        "/auth_debug.txt",
+        "/login_debug.txt",
+        "/data/bank.log",
+        "/data/bank.log.old"
+    }
+    for _, file in ipairs(debugFiles) do
+        if fs.exists(file) then
+            print("  Removing: " .. file)
+            fs.delete(file)
+        end
     end
     
     print("Cleanup complete!")
