@@ -112,11 +112,34 @@ local function showLogin()
         statusLabel.style.fgColor = colors.yellow
         statusLabel:setText("Authenticating...")
         
+        -- Debug: Log the request
+        local f = fs.open("/auth_request_debug.txt", "w")
+        if f then
+            f.writeLine("Sending AUTH_REQUEST")
+            f.writeLine("Username: " .. user)
+            f.writeLine("Password length: " .. #pass)
+            f.writeLine("Listening on port: " .. config.pocket.port)
+            f.close()
+        end
+        
         -- Send plain password (will be encrypted by network layer)
         local response, err = sendToServer(network.MSG.AUTH_REQUEST, {
             username = user,
             password = pass
         }, true)
+        
+        -- Debug: Log the response
+        f = fs.open("/auth_response_debug.txt", "w")
+        if f then
+            f.writeLine("Response received: " .. tostring(response ~= nil))
+            if response then
+                f.writeLine("Response type: " .. tostring(response.type))
+                f.writeLine("Has data: " .. tostring(response.data ~= nil))
+            else
+                f.writeLine("Error: " .. tostring(err))
+            end
+            f.close()
+        end
         
         if response and response.type == network.MSG.AUTH_RESPONSE then
             if response.data.encrypted then
