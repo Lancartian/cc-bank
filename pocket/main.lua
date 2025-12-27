@@ -176,12 +176,32 @@ local function showLogin()
                 end
                 
                 if authData and authData.token then
+                    local f4 = fs.open("/auth_success_debug.txt", "w")
+                    if f4 then
+                        f4.writeLine("Setting session data...")
+                        f4.close()
+                    end
+                    
                     sessionToken = authData.token
                     accountNumber = authData.accountNumber
                     username = user
                     balance = authData.balance or 0
                     
+                    local f5 = fs.open("/auth_menu_debug.txt", "w")
+                    if f5 then
+                        f5.writeLine("About to call showMenu()")
+                        f5.writeLine("Current screen: " .. currentScreen)
+                        f5.close()
+                    end
+                    
                     showMenu()
+                    
+                    local f6 = fs.open("/auth_complete_debug.txt", "w")
+                    if f6 then
+                        f6.writeLine("showMenu() returned")
+                        f6.writeLine("Current screen: " .. currentScreen)
+                        f6.close()
+                    end
                 else
                     statusLabel.style.fgColor = colors.red
                     statusLabel:setText("Authentication failed")
