@@ -291,23 +291,44 @@ handlers[network.MSG.AUTH_REQUEST] = function(message, sender)
     -- Decrypt credentials if encrypted
     local username, password
     
-    if message.data.isEncrypted and message.data.encrypted then
-        -- Decrypt the payload
-        local decoded = crypto.base64Decode(message.data.encrypted)
-        local decrypted = crypto.decrypt(decoded, encryptionKey)
-        
-        -- Parse JSON
-        local success, decryptedData = pcall(textutils.unserialiseJSON, decrypted)
-        if not success or not decryptedData then
-            return network.errorResponse("decryption_failed", "Could not decrypt credentials")
+    if message.data and message.data.isEncrypted and message.data.encrypted then
+        local decryptedData = nil
+
+        -- Try base64 decode + decrypt (normal path)
+        local ok, decoded = pcall(function() return crypto.base64Decode(message.data.encrypted) end)
+        if ok and decoded then
+            local success, dec = pcall(function() return crypto.decrypt(decoded, encryptionKey) end)
+            if success and dec then
+                local parseOk, parsed = pcall(textutils.unserialiseJSON, dec)
+                if parseOk and parsed then
+                    decryptedData = parsed
+                end
+            end
         end
-        
-        username = decryptedData.username
-        password = decryptedData.password
+
+        -- If that failed, try decrypting raw (in case payload wasn't base64-encoded)
+        if not decryptedData then
+            local ok2, dec2 = pcall(function() return crypto.decrypt(message.data.encrypted, encryptionKey) end)
+            if ok2 and dec2 then
+                local parseOk2, parsed2 = pcall(textutils.unserialiseJSON, dec2)
+                if parseOk2 and parsed2 then
+                    decryptedData = parsed2
+                end
+            end
+        end
+
+        -- If still not decrypted, fall back to plaintext fields if present
+        if decryptedData then
+            username = decryptedData.username
+            password = decryptedData.password
+        else
+            username = message.data.username or message.data.user
+            password = message.data.password or message.data.pass
+        end
     else
         -- Fallback for unencrypted (should not happen in production)
-        username = message.data.username
-        password = message.data.password
+        username = message.data and (message.data.username or message.data.user)
+        password = message.data and (message.data.password or message.data.pass)
     end
     
     if not username or not password then
