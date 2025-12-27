@@ -16,6 +16,8 @@ local managementToken = nil
 local statusMessage = ""
 local messageColor = colors.white
 local catalogData = {}
+local priceItemList = nil
+local priceSelectedIndex = nil
 
 -- Initialize modem
 local modem = network.init(config.management.port)
@@ -197,7 +199,12 @@ loginBtn.onClick = function()
     -- Decode salt from base64
     local salt = crypto.base64Decode(config.management.masterPasswordSalt)
     
-    if crypto.verifyPassword(password, config.management.masterPasswordHash, salt) then
+    local ok, saltDecoded = pcall(function() return crypto.base64Decode(config.management.masterPasswordSalt) end)
+    if not ok or not saltDecoded then
+        saltDecoded = config.management.masterPasswordSalt
+    end
+
+    if crypto.verifyPassword(password, config.management.masterPasswordHash, saltDecoded) then
         authenticated = true
         
         -- Authenticate with server to get management session token
@@ -450,8 +457,7 @@ priceItemLabel.style.fgColor = colors.gray
 setPriceScreen:addChild(priceItemLabel)
 
 -- Use a list to select item (stores index into catalogData)
-local priceItemList = sgl.List:new(2, 4, 40, 4)
-local priceSelectedIndex = nil
+priceItemList = sgl.List:new(2, 4, 40, 4)
 priceItemList.onSelectionChanged = function(index, text)
     priceSelectedIndex = index
 end
@@ -499,8 +505,17 @@ setPriceBtn.onClick = function()
         setPriceStatusLabel:setText("Price updated successfully!")
         setPriceStatusLabel.style.fgColor = colors.green
         priceSelectedIndex = nil
-        priceItemList.items = {}
         newPriceInput:setText("")
+        -- Refresh catalog and repopulate set-price list so updated prices are shown
+        refreshCatalog()
+        if priceItemList and catalogData then
+            local listItems = {}
+            for _, it in ipairs(catalogData) do
+                local priceText = it.price and it.price > 0 and ("$" .. it.price) or "[No price]"
+                table.insert(listItems, string.format("%s - %s (x%d)", it.displayName, priceText, it.stock))
+            end
+            priceItemList.items = #listItems == 0 and {"No items in STORAGE chests"} or listItems
+        end
     else
         setPriceStatusLabel:setText("Error: " .. tostring(err))
         setPriceStatusLabel.style.fgColor = colors.red
