@@ -235,8 +235,7 @@ local handlers = {}
 handlers[network.MSG.PING] = function(message, sender)
     return network.createMessage(network.MSG.PONG, {
         serverID = os.getComputerID(),
-        timestamp = os.epoch("utc"),
-        encryptionKey = encryptionKey
+        timestamp = os.epoch("utc")
     })
 end
 
@@ -344,15 +343,14 @@ handlers[network.MSG.AUTH_REQUEST] = function(message, sender)
     local token = createSession(accountNumber)
     local account = accounts.get(accountNumber)
     
-    -- Send encrypted response
+    -- Send response (do not leak server encryption key)
     return network.createMessage(network.MSG.AUTH_RESPONSE, {
         success = true,
         token = token,
         accountNumber = accountNumber,
         username = account.username,
-        balance = account.balance,
-        encryptionKey = encryptionKey  -- Share encryption key for session
-    }, nil, encryptionKey)
+        balance = account.balance
+    })
 end
 
 -- Account creation (management only)

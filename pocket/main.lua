@@ -124,25 +124,15 @@ showLogin = function()
         }, true)
         
         if response and response.type == network.MSG.AUTH_RESPONSE then
-            if response.data.encrypted then
-                local decrypted = crypto.base64Decode(response.data.encrypted)
-                local decryptedData = crypto.decrypt(decrypted, encryptionKey)
-                local authData = textutils.unserialiseJSON(decryptedData)
-                
-                if authData and authData.token then
-                    sessionToken = authData.token
-                    accountNumber = authData.accountNumber
-                    username = user
-                    balance = authData.balance or 0
-                    
-                    showMenu()
-                else
-                    statusLabel.style.fgColor = colors.red
-                    statusLabel:setText("Authentication failed")
-                end
+            if response.data and response.data.success then
+                sessionToken = response.data.token
+                accountNumber = response.data.accountNumber
+                username = user
+                balance = response.data.balance or 0
+                showMenu()
             else
                 statusLabel.style.fgColor = colors.red
-                statusLabel:setText("Invalid response from server")
+                statusLabel:setText("Authentication failed")
             end
         elseif response and response.type == network.MSG.ERROR then
             -- Handle error response from server
@@ -460,7 +450,6 @@ if pingResponse then
     end
 end
 if pingResponse and pingResponse.type == network.MSG.PONG then
-    encryptionKey = pingResponse.data.encryptionKey
     print("Connected!")
 else
     error("Could not connect to server")
