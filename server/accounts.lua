@@ -3,6 +3,7 @@
 
 local crypto = require("/lib/crypto")
 local config = require("/config")
+local base64Pattern = "^[A-Za-z0-9+/=]+$"
 
 local accounts = {}
 
@@ -80,7 +81,7 @@ function accounts.create(username, password, initialBalance)
         accountNumber = accountNumber,
         username = username,
         passwordHash = passwordData.hash,
-        passwordSalt = passwordData.salt,
+        passwordSalt = crypto.base64Encode(passwordData.salt),
         balance = initialBalance,
         created = os.epoch("utc"),
         lastLogin = nil,
@@ -127,8 +128,13 @@ function accounts.authenticate(username, password)
         end
     end
     
+    -- Verify password (decode base64 salt if necessary)
+    local salt = account.passwordSalt
+    if type(salt) == "string" and salt:match(base64Pattern) then
+        salt = crypto.base64Decode(salt)
+    end
     -- Verify password
-    if crypto.verifyPassword(password, account.passwordHash, account.passwordSalt) then
+    if crypto.verifyPassword(password, account.passwordHash, salt) then
         account.failedAttempts = 0
         account.lastLogin = os.epoch("utc")
         accounts.save()
@@ -169,8 +175,13 @@ function accounts.authenticatePIN(accountNumber, pin)
         end
     end
     
+    -- Verify PIN (decode base64 salt if necessary)
+    local psalt = account.pinSalt
+    if type(psalt) == "string" and psalt:match(base64Pattern) then
+        psalt = crypto.base64Decode(psalt)
+    end
     -- Verify PIN
-    if crypto.verifyPassword(pin, account.pinHash, account.pinSalt) then
+    if crypto.verifyPassword(pin, account.pinHash, psalt) then
         account.failedAttempts = 0
         account.lastLogin = os.epoch("utc")
         accounts.save()
@@ -201,7 +212,7 @@ function accounts.setPIN(accountNumber, pin)
     
     local pinData = crypto.hashPassword(pin)
     account.pinHash = pinData.hash
-    account.pinSalt = pinData.salt
+    account.pinSalt = crypto.base64Encode(pinData.salt)
     
     accounts.save()
     return true, nil
@@ -313,10 +324,10 @@ function accounts.resetPassword(accountNumber, newPassword)
         return false, "password_too_short"
     end
     
-    -- Hash new password
+    -- Hash new password and store salt as base64
     local passwordData = crypto.hashPassword(newPassword)
     account.passwordHash = passwordData.hash
-    account.passwordSalt = passwordData.salt
+    account.passwordSalt = crypto.base64Encode(passwordData.salt)
     
     -- Also unlock account and reset failed attempts
     account.locked = false
