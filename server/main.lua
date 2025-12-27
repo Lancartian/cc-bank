@@ -8,6 +8,7 @@ local accounts = require("/server/accounts")
 local transactions = require("/server/transactions")
 local networkStorage = require("/server/network_storage")
 local catalog = require("/server/catalog")
+local shopCatalog = require("/server/shop_catalog")
 
 -- Initialize configuration
 config.init()
@@ -100,6 +101,7 @@ accounts.load()
 transactions.load()
 catalog.load()
 networkStorage.initialize()
+shopCatalog.initialize()
 
 print("Accounts loaded: " .. #accounts.list())
 print("Transactions loaded: " .. transactions.getStats().totalTransactions)
@@ -107,6 +109,8 @@ local catalogStats = catalog.getStats()
 print("Catalog items: " .. catalogStats.totalItems)
 local storageInfo = networkStorage.getChestInfo()
 print("Storage chests: " .. storageInfo.storageChests)
+print("Shop catalog items: " .. shopCatalog.getItemCount())
+print("Shop total stock: " .. shopCatalog.getTotalStock())
 print("Void chests: " .. storageInfo.voidChests)
 
 -- Session management functions
@@ -630,6 +634,106 @@ handlers[network.MSG.SHOP_MANAGE] = function(message, sender)
     end
 end
 
+-- Shop Catalog - Get all items (auto-scanned from STORAGE chests)
+handlers[network.MSG.SHOP_GET_CATALOG] = function(message, sender)
+    local session, err = validateSession(message.token)
+    if not session then
+        return network.errorResponse("session_error", err)
+    end
+    
+    local searchTerm = message.data and message.data.search
+    local items
+    
+    if searchTerm then
+        items = shopCatalog.search(searchTerm)
+    else
+        items = shopCatalog.getAll()
+    end
+    
+    return network.successResponse({
+        items = items,
+        totalItems = shopCatalog.getItemCount(),
+        totalStock = shopCatalog.getTotalStock(),
+        lastScan = shopCatalog.getLastScanTime()
+    })
+end
+
+-- Shop Catalog - Set item price (Management only)
+handlers[network.MSG.SHOP_SET_PRICE] = function(message, sender)
+    local mgmtSession, err = validateManagementSession(message.token)
+    if not mgmtSession then
+        return network.errorResponse("unauthorized", err or "Management access required")
+    end
+    
+    local itemName = message.data.itemName
+    local price = message.data.price
+    
+    if not itemName or not price then
+        return network.errorResponse("missing_fields", "Item name and price required")
+    end
+    
+    if price < 0 then
+        return network.errorResponse("invalid_price", "Price must be non-negative")
+    end
+    
+    local success = shopCatalog.setPrice(itemName, price)
+    if not success then
+        return network.errorResponse("item_not_found", "Item not in catalog")
+    end
+    
+    return network.successResponse({
+        message = "Price updated",
+        itemName = itemName,
+        price = price
+    })
+end
+
+-- Shop Catalog - Rename item (Management only)
+handlers[network.MSG.SHOP_RENAME_ITEM] = function(message, sender)
+    local mgmtSession, err = validateManagementSession(message.token)
+    if not mgmtSession then
+        return network.errorResponse("unauthorized", err or "Management access required")
+    end
+    
+    local itemName = message.data.itemName
+    local displayName = message.data.displayName
+    
+    if not itemName or not displayName then
+        return network.errorResponse("missing_fields", "Item name and display name required")
+    end
+    
+    local success = shopCatalog.setDisplayName(itemName, displayName)
+    if not success then
+        return network.errorResponse("item_not_found", "Item not in catalog")
+    end
+    
+    return network.successResponse({
+        message = "Item renamed",
+        itemName = itemName,
+        displayName = displayName
+    })
+end
+
+-- Shop Catalog - Rescan STORAGE chests (Management only)
+handlers[network.MSG.SHOP_RESCAN] = function(message, sender)
+    local mgmtSession, err = validateManagementSession(message.token)
+    if not mgmtSession then
+        return network.errorResponse("unauthorized", err or "Management access required")
+    end
+    
+    local success = shopCatalog.rescan()
+    if not success then
+        return network.errorResponse("rescan_failed", "Failed to rescan storage chests")
+    end
+    
+    return network.successResponse({
+        message = "Storage rescanned successfully",
+        totalItems = shopCatalog.getItemCount(),
+        totalStock = shopCatalog.getTotalStock(),
+        lastScan = shopCatalog.getLastScanTime()
+    })
+end
+
 -- Transfer
 handlers[network.MSG.TRANSFER] = function(message, sender)
     -- Check nonce
@@ -717,7 +821,10 @@ local function serverLoop()
                        message.type == network.MSG.ACCOUNT_LIST or
                        message.type == network.MSG.ACCOUNT_DELETE or
                        message.type == network.MSG.ACCOUNT_UNLOCK or
-                       message.type == network.MSG.SHOP_MANAGE then
+                       message.type == network.MSG.SHOP_MANAGE or
+                       message.type == network.MSG.SHOP_SET_PRICE or
+                       message.type == network.MSG.SHOP_RENAME_ITEM or
+                       message.type == network.MSG.SHOP_RESCAN then
                         responsePort = config.management.port
                     -- Pocket/Shop messages get responses on their respective ports  
                     elseif message.type == network.MSG.PING or
@@ -725,7 +832,8 @@ local function serverLoop()
                            message.type == network.MSG.BALANCE_CHECK or
                            message.type == network.MSG.TRANSFER or
                            message.type == network.MSG.SHOP_BROWSE or
-                           message.type == network.MSG.SHOP_PURCHASE then
+                           message.type == network.MSG.SHOP_PURCHASE or
+                           message.type == network.MSG.SHOP_GET_CATALOG then
                         responsePort = config.pocket.port or config.server.port
                     end
                     

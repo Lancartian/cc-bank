@@ -1,0 +1,292 @@
+-- server/shop_catalog.lua
+-- Automatic shop catalog system inspired by CC-STR storage system
+-- Scans STORAGE chests to build catalog automatically
+
+local textutils = textutils
+local fs = fs
+
+local catalog = {}
+
+-- State
+local itemCatalog = {}  -- {itemName = {displayName, totalStock, price, locations = {chestName = count}}}
+local cacheValid = false
+local lastScanTime = 0
+local CACHE_FILE = "shop_catalog_cache.dat"
+
+-- Dependencies (lazy loaded to avoid circular dependencies)
+local networkStorage = nil
+
+-- Get network storage module
+local function getNetworkStorage()
+    if not networkStorage then
+        networkStorage = require("/server/network_storage")
+    end
+    return networkStorage
+end
+
+-- Save cache to disk
+local function saveCache()
+    local file = fs.open(CACHE_FILE, "w")
+    if file then
+        file.write(textutils.serialize({
+            itemCatalog = itemCatalog,
+            lastScanTime = os.epoch("utc")
+        }))
+        file.close()
+        return true
+    end
+    return false
+end
+
+-- Load cache from disk
+local function loadCache()
+    if not fs.exists(CACHE_FILE) then
+        return false
+    end
+    
+    local file = fs.open(CACHE_FILE, "r")
+    if file then
+        local content = file.readAll()
+        file.close()
+        
+        local success, data = pcall(textutils.unserialize, content)
+        if success and data then
+            itemCatalog = data.itemCatalog or {}
+            lastScanTime = data.lastScanTime or 0
+            cacheValid = true
+            return true
+        end
+    end
+    return false
+end
+
+-- Initialize catalog system
+function catalog.initialize()
+    local storage = getNetworkStorage()
+    
+    -- Try to load cached data first
+    if loadCache() then
+        -- Quick validation: check if we still have the expected storage chests
+        local storageChests = storage.getStorageChests()
+        if #storageChests > 0 then
+            -- Cache is potentially valid
+            return true
+        end
+    end
+    
+    -- Cache not available or invalid, do full scan
+    return catalog.rescan()
+end
+
+-- Scan all STORAGE chests and build catalog
+function catalog.rescan()
+    itemCatalog = {}
+    local storage = getNetworkStorage()
+    
+    -- Get all STORAGE chests from network_storage
+    local storageChests = storage.getStorageChests()
+    
+    if #storageChests == 0 then
+        -- No storage chests found, but this is OK - empty catalog
+        cacheValid = true
+        lastScanTime = os.epoch("utc")
+        saveCache()
+        return true
+    end
+    
+    -- Scan each STORAGE chest
+    for _, chestInfo in ipairs(storageChests) do
+        local chest = peripheral.wrap(chestInfo.peripheral)
+        if chest and chest.list then
+            local items = chest.list()
+            
+            for slot, item in pairs(items) do
+                -- Skip marker papers
+                if item.name ~= "minecraft:paper" then
+                    -- Initialize item entry if needed
+                    if not itemCatalog[item.name] then
+                        itemCatalog[item.name] = {
+                            name = item.name,
+                            displayName = nil,
+                            totalStock = 0,
+                            price = 0,  -- Default price, can be set by management console
+                            locations = {}
+                        }
+                    end
+                    
+                    -- Add to total stock
+                    itemCatalog[item.name].totalStock = itemCatalog[item.name].totalStock + item.count
+                    
+                    -- Track location
+                    if not itemCatalog[item.name].locations[chestInfo.peripheral] then
+                        itemCatalog[item.name].locations[chestInfo.peripheral] = 0
+                    end
+                    itemCatalog[item.name].locations[chestInfo.peripheral] = 
+                        itemCatalog[item.name].locations[chestInfo.peripheral] + item.count
+                end
+            end
+        end
+    end
+    
+    -- Get display names for items
+    for itemName, itemData in pairs(itemCatalog) do
+        -- Try to get detailed info from first location
+        for chestName, _ in pairs(itemData.locations) do
+            local chest = peripheral.wrap(chestName)
+            if chest then
+                local items = chest.list()
+                for slot, item in pairs(items) do
+                    if item.name == itemName then
+                        local detail = chest.getItemDetail(slot)
+                        if detail and detail.displayName then
+                            itemData.displayName = detail.displayName
+                            break
+                        end
+                    end
+                end
+            end
+            if itemData.displayName then
+                break
+            end
+        end
+    end
+    
+    -- Mark cache as valid and save to disk
+    cacheValid = true
+    lastScanTime = os.epoch("utc")
+    saveCache()
+    
+    return true
+end
+
+-- Get all catalog items
+function catalog.getAll()
+    local items = {}
+    for itemName, itemData in pairs(itemCatalog) do
+        table.insert(items, {
+            name = itemName,
+            displayName = itemData.displayName or itemName,
+            stock = itemData.totalStock,
+            price = itemData.price
+        })
+    end
+    
+    -- Sort by display name
+    table.sort(items, function(a, b)
+        return a.displayName < b.displayName
+    end)
+    
+    return items
+end
+
+-- Search catalog items
+function catalog.search(searchTerm)
+    local results = {}
+    local searchLower = string.lower(searchTerm)
+    
+    for itemName, itemData in pairs(itemCatalog) do
+        local itemNameLower = string.lower(itemName)
+        local displayNameLower = itemData.displayName and string.lower(itemData.displayName) or ""
+        
+        -- Check if search term matches
+        if string.find(itemNameLower, searchLower, 1, true) or 
+           string.find(displayNameLower, searchLower, 1, true) then
+            
+            table.insert(results, {
+                name = itemName,
+                displayName = itemData.displayName or itemName,
+                stock = itemData.totalStock,
+                price = itemData.price
+            })
+        end
+    end
+    
+    -- Sort by display name
+    table.sort(results, function(a, b)
+        return a.displayName < b.displayName
+    end)
+    
+    return results
+end
+
+-- Get item by name
+function catalog.getItem(itemName)
+    if itemCatalog[itemName] then
+        return {
+            name = itemName,
+            displayName = itemCatalog[itemName].displayName or itemName,
+            stock = itemCatalog[itemName].totalStock,
+            price = itemCatalog[itemName].price,
+            locations = itemCatalog[itemName].locations
+        }
+    end
+    return nil
+end
+
+-- Set price for an item
+function catalog.setPrice(itemName, price)
+    if itemCatalog[itemName] and price >= 0 then
+        itemCatalog[itemName].price = price
+        saveCache()
+        return true
+    end
+    return false
+end
+
+-- Set display name for an item (custom rename)
+function catalog.setDisplayName(itemName, displayName)
+    if itemCatalog[itemName] and displayName and displayName ~= "" then
+        itemCatalog[itemName].displayName = displayName
+        saveCache()
+        return true
+    end
+    return false
+end
+
+-- Check if item is in stock with enough quantity
+function catalog.checkStock(itemName, quantity)
+    if not itemCatalog[itemName] then
+        return false, "Item not found"
+    end
+    
+    if itemCatalog[itemName].totalStock < quantity then
+        return false, "Insufficient stock"
+    end
+    
+    return true
+end
+
+-- Get total number of unique items
+function catalog.getItemCount()
+    local count = 0
+    for _ in pairs(itemCatalog) do
+        count = count + 1
+    end
+    return count
+end
+
+-- Get total stock across all items
+function catalog.getTotalStock()
+    local total = 0
+    for _, itemData in pairs(itemCatalog) do
+        total = total + itemData.totalStock
+    end
+    return total
+end
+
+-- Get last scan time
+function catalog.getLastScanTime()
+    return lastScanTime
+end
+
+-- Check if cache is valid
+function catalog.isCacheValid()
+    return cacheValid
+end
+
+-- Invalidate cache (for external use)
+function catalog.invalidateCache()
+    cacheValid = false
+end
+
+return catalog

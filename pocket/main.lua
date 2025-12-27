@@ -210,7 +210,7 @@ showShop = function()
     title.style.fgColor = colors.yellow
     root:addChild(title)
     
-    local statusLabel = sgl.Label:new(2, 2, "Loading...", w - 2)
+    local statusLabel = sgl.Label:new(2, 2, "Loading catalog...", w - 2)
     root:addChild(statusLabel)
     
     local backBtn = sgl.Button:new(2, h - 3, w - 2, 3, "Back")
@@ -219,15 +219,16 @@ showShop = function()
     
     root:markDirty()
     
-    -- Fetch shop items
-    local response, err = sendToServer(network.MSG.SHOP_BROWSE, {}, true)
+    -- Fetch shop catalog (auto-scanned from STORAGE chests)
+    local response, err = sendToServer(network.MSG.SHOP_GET_CATALOG, {}, true)
     if response and response.type == network.MSG.SUCCESS then
         root:removeChild(statusLabel)
         
         local items = response.data.items
         if #items == 0 then
-            statusLabel.text = "No items available"
-            root:addChild(statusLabel)
+            local emptyLabel = sgl.Label:new(2, 2, "No items in stock", w - 2)
+            emptyLabel.style.fgColor = colors.gray
+            root:addChild(emptyLabel)
         else
             -- Create scrollable list
             local itemList = sgl.List:new(2, 3, w - 2, h - 5)
@@ -235,17 +236,26 @@ showShop = function()
             local itemData = {}
             
             for i, item in ipairs(items) do
-                table.insert(itemNames, item.displayName .. " - $" .. item.price .. " (x" .. item.stock .. ")")
-                itemData[i] = item
-            end
-            
-            itemList.items = itemNames
-            itemList.onSelectionChanged = function(index, text)
-                if itemData[index] then
-                    showPurchase(itemData[index])
+                if item.price > 0 then
+                    -- Only show items with prices set
+                    table.insert(itemNames, item.displayName .. " - $" .. item.price .. " (x" .. item.stock .. ")")
+                    itemData[#itemNames] = item
                 end
             end
-            root:addChild(itemList)
+            
+            if #itemNames == 0 then
+                local noPricesLabel = sgl.Label:new(2, 2, "No items priced yet", w - 2)
+                noPricesLabel.style.fgColor = colors.gray
+                root:addChild(noPricesLabel)
+            else
+                itemList.items = itemNames
+                itemList.onSelectionChanged = function(index, text)
+                    if itemData[index] then
+                        showPurchase(itemData[index])
+                    end
+                end
+                root:addChild(itemList)
+            end
         end
     else
         statusLabel:setText("Error: " .. tostring(err or "Unknown error"))

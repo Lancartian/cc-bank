@@ -321,24 +321,24 @@ local shopTitle = sgl.Label:new(10, 1, "Shop Management", 43)
 shopTitle.style.fgColor = colors.yellow
 shopScreen:addChild(shopTitle)
 
-local addItemBtn = sgl.Button:new(3, 3, 18, 2, "Add Item")
-addItemBtn.onClick = function()
-    showScreen("addItem")
+local viewCatalogBtn = sgl.Button:new(3, 3, 38, 2, "View Shop Catalog")
+viewCatalogBtn.onClick = function()
+    showScreen("shopCatalog")
 end
-shopScreen:addChild(addItemBtn)
+shopScreen:addChild(viewCatalogBtn)
 
-local listItemsBtn = sgl.Button:new(23, 3, 18, 2, "List Items")
-listItemsBtn.onClick = function()
-    showScreen("listItems")
+local setPricesBtn = sgl.Button:new(3, 6, 38, 2, "Set Item Prices")
+setPricesBtn.onClick = function()
+    showScreen("setPrice")
 end
-shopScreen:addChild(listItemsBtn)
+shopScreen:addChild(setPricesBtn)
 
-local processBtn = sgl.Button:new(3, 6, 38, 2, "Process INPUT Chests")
-processBtn.style.bgColor = colors.green
-processBtn.onClick = function()
-    showScreen("processItems")
+local rescanBtn = sgl.Button:new(3, 9, 38, 2, "Rescan STORAGE Chests")
+rescanBtn.style.bgColor = colors.orange
+rescanBtn.onClick = function()
+    showScreen("rescanStorage")
 end
-shopScreen:addChild(processBtn)
+shopScreen:addChild(rescanBtn)
 
 local shopBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
 shopBackBtn.onClick = function()
@@ -346,148 +346,190 @@ shopBackBtn.onClick = function()
 end
 shopScreen:addChild(shopBackBtn)
 
--- Add Item screen
-local addItemScreen = sgl.Panel:new(2, 2, 47, 15)
-addItemScreen:setBorder(false)
-addItemScreen:setVisible(false)
-addItemScreen.data = {isScreen = true, screenName = "addItem"}
-root:addChild(addItemScreen)
+-- Shop Catalog View screen (similar to inventory view in storage system)
+local shopCatalogScreen = sgl.Panel:new(2, 2, 47, 15)
+shopCatalogScreen:setBorder(false)
+shopCatalogScreen:setVisible(false)
+shopCatalogScreen.data = {isScreen = true, screenName = "shopCatalog"}
+root:addChild(shopCatalogScreen)
 
-local addItemTitle = sgl.Label:new(10, 1, "Add Shop Item", 43)
-addItemTitle.style.fgColor = colors.yellow
-addItemScreen:addChild(addItemTitle)
+local shopCatalogTitle = sgl.Label:new(10, 1, "Shop Catalog", 43)
+shopCatalogTitle.style.fgColor = colors.yellow
+shopCatalogScreen:addChild(shopCatalogTitle)
 
-local nameLabel = sgl.Label:new(2, 3, "Item Name:", 43)
-addItemScreen:addChild(nameLabel)
+local catalogInfoLabel = sgl.Label:new(2, 2, "", 43)
+catalogInfoLabel.style.fgColor = colors.gray
+shopCatalogScreen:addChild(catalogInfoLabel)
 
-local nameInput = sgl.Input:new(2, 4, 40, 1)
-addItemScreen:addChild(nameInput)
+local catalogListLabels = {}
+for i = 1, 9 do
+    local label = sgl.Label:new(2, 3 + i, "", 43)
+    label.style.fgColor = colors.white
+    shopCatalogScreen:addChild(label)
+    catalogListLabels[i] = label
+end
 
-local priceLabel = sgl.Label:new(2, 5, "Price:", 43)
-addItemScreen:addChild(priceLabel)
-
-local priceInput = sgl.Input:new(2, 6, 40, 1)
-addItemScreen:addChild(priceInput)
-
-local categoryLabel = sgl.Label:new(2, 7, "Category:", 43)
-addItemScreen:addChild(categoryLabel)
-
-local categoryInput = sgl.Input:new(2, 8, 40, 1)
-addItemScreen:addChild(categoryInput)
-
-local descLabel = sgl.Label:new(2, 9, "Description:", 43)
-addItemScreen:addChild(descLabel)
-
-local descInput = sgl.Input:new(2, 10, 40, 1)
-addItemScreen:addChild(descInput)
-
-local addStatusLabel = sgl.Label:new(2, 11, "", 43)
-addItemScreen:addChild(addStatusLabel)
-
-local addBtn = sgl.Button:new(10, 12, 25, 2, "Add Item")
-addBtn.style.bgColor = colors.green
-addBtn.onClick = function()
-    local itemName = nameInput:getText()
-    local itemPrice = tonumber(priceInput:getText())
-    local itemCategory = categoryInput:getText()
-    local itemDesc = descInput:getText()
+local function refreshCatalog()
+    catalogInfoLabel:setText("Loading...")
+    root:markDirty()
     
-    if itemName == "" or not itemPrice or itemPrice <= 0 then
-        addStatusLabel:setText("Invalid name or price")
-        addStatusLabel.style.fgColor = colors.red
+    local result, err = sendToServer(network.MSG.SHOP_GET_CATALOG, {})
+    
+    if result and result.items then
+        catalogInfoLabel:setText(string.format("Items: %d | Total Stock: %d", 
+            result.totalItems or 0, result.totalStock or 0))
+        catalogInfoLabel.style.fgColor = colors.gray
+        
+        for i = 1, 9 do
+            if result.items[i] then
+                local item = result.items[i]
+                local priceText = item.price > 0 and ("$" .. item.price) or "[No price]"
+                catalogListLabels[i]:setText(string.format("%s - %s (x%d)",
+                    item.displayName, priceText, item.stock))
+                catalogListLabels[i].style.fgColor = item.price > 0 and colors.white or colors.gray
+            else
+                catalogListLabels[i]:setText("")
+            end
+        end
+        
+        if result.totalItems == 0 then
+            catalogListLabels[1]:setText("No items in STORAGE chests")
+            catalogListLabels[1].style.fgColor = colors.gray
+        end
+    else
+        catalogInfoLabel:setText("Error: " .. tostring(err))
+        catalogInfoLabel.style.fgColor = colors.red
+    end
+    root:markDirty()
+end
+
+local catalogBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
+catalogBackBtn.onClick = function()
+    showScreen("shop")
+end
+shopCatalogScreen:addChild(catalogBackBtn)
+
+local catalogRefreshBtn = sgl.Button:new(20, 14, 20, 1, "Refresh")
+catalogRefreshBtn.onClick = function()
+    refreshCatalog()
+end
+shopCatalogScreen:addChild(catalogRefreshBtn)
+
+-- Set Price screen
+local setPriceScreen = sgl.Panel:new(2, 2, 47, 15)
+setPriceScreen:setBorder(false)
+setPriceScreen:setVisible(false)
+setPriceScreen.data = {isScreen = true, screenName = "setPrice"}
+root:addChild(setPriceScreen)
+
+local setPriceTitle = sgl.Label:new(10, 1, "Set Item Price", 43)
+setPriceTitle.style.fgColor = colors.yellow
+setPriceScreen:addChild(setPriceTitle)
+
+local priceItemLabel = sgl.Label:new(2, 3, "Item Name (from catalog):", 43)
+priceItemLabel.style.fgColor = colors.gray
+setPriceScreen:addChild(priceItemLabel)
+
+local priceItemInput = sgl.Input:new(2, 4, 40, 1)
+setPriceScreen:addChild(priceItemInput)
+
+local newPriceLabel = sgl.Label:new(2, 6, "New Price:", 43)
+setPriceScreen:addChild(newPriceLabel)
+
+local newPriceInput = sgl.Input:new(2, 7, 40, 1)
+setPriceScreen:addChild(newPriceInput)
+
+local setPriceStatusLabel = sgl.Label:new(2, 9, "", 43)
+setPriceScreen:addChild(setPriceStatusLabel)
+
+local setPriceBtn = sgl.Button:new(10, 11, 25, 2, "Set Price")
+setPriceBtn.style.bgColor = colors.green
+setPriceBtn.onClick = function()
+    local itemName = priceItemInput:getText()
+    local price = tonumber(newPriceInput:getText())
+    
+    if itemName == "" or not price or price < 0 then
+        setPriceStatusLabel:setText("Invalid item name or price")
+        setPriceStatusLabel.style.fgColor = colors.red
         root:markDirty()
         return
     end
     
-    addStatusLabel:setText("Adding...")
-    addStatusLabel.style.fgColor = colors.white
+    setPriceStatusLabel:setText("Updating price...")
+    setPriceStatusLabel.style.fgColor = colors.white
     root:markDirty()
     
-    local result, err = sendToServer(network.MSG.SHOP_MANAGE, {
-        action = "add",
+    local result, err = sendToServer(network.MSG.SHOP_SET_PRICE, {
         itemName = itemName,
-        price = itemPrice,
-        category = itemCategory,
-        description = itemDesc
+        price = price
     })
     
     if result then
-        addStatusLabel:setText("Item added successfully")
-        addStatusLabel.style.fgColor = colors.green
-        nameInput:setText("")
-        priceInput:setText("")
-        categoryInput:setText("")
-        descInput:setText("")
+        setPriceStatusLabel:setText("Price updated successfully!")
+        setPriceStatusLabel.style.fgColor = colors.green
+        priceItemInput:setText("")
+        newPriceInput:setText("")
     else
-        addStatusLabel:setText("Error: " .. tostring(err))
-        addStatusLabel.style.fgColor = colors.red
+        setPriceStatusLabel:setText("Error: " .. tostring(err))
+        setPriceStatusLabel.style.fgColor = colors.red
     end
     root:markDirty()
 end
-addItemScreen:addChild(addBtn)
+setPriceScreen:addChild(setPriceBtn)
 
-local addItemBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
-addItemBackBtn.onClick = function()
+local setPriceBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
+setPriceBackBtn.onClick = function()
     showScreen("shop")
 end
-addItemScreen:addChild(addItemBackBtn)
+setPriceScreen:addChild(setPriceBackBtn)
 
--- List Items screen
-local listItemsScreen = sgl.Panel:new(2, 2, 47, 15)
-listItemsScreen:setBorder(false)
-listItemsScreen:setVisible(false)
-listItemsScreen.data = {isScreen = true, screenName = "listItems"}
-root:addChild(listItemsScreen)
+-- Rescan Storage screen
+local rescanStorageScreen = sgl.Panel:new(2, 2, 47, 15)
+rescanStorageScreen:setBorder(false)
+rescanStorageScreen:setVisible(false)
+rescanStorageScreen.data = {isScreen = true, screenName = "rescanStorage"}
+root:addChild(rescanStorageScreen)
 
-local listItemsTitle = sgl.Label:new(10, 1, "Shop Items", 43)
-listItemsTitle.style.fgColor = colors.yellow
-listItemsScreen:addChild(listItemsTitle)
+local rescanTitle = sgl.Label:new(10, 1, "Rescan STORAGE Chests", 43)
+rescanTitle.style.fgColor = colors.yellow
+rescanStorageScreen:addChild(rescanTitle)
 
-local itemListLabels = {}
-for i = 1, 10 do
-    local label = sgl.Label:new(2, 2 + i, "", 43)
-    label.style.fgColor = colors.white
-    listItemsScreen:addChild(label)
-    itemListLabels[i] = label
-end
+local rescanInfo = sgl.Label:new(2, 3, "Scans all STORAGE chests and updates catalog", 43)
+rescanInfo.style.fgColor = colors.gray
+rescanStorageScreen:addChild(rescanInfo)
 
-local function refreshItemList()
-    local result, err = sendToServer(network.MSG.SHOP_BROWSE, {})
+local rescanStatusLabel = sgl.Label:new(2, 5, "", 43)
+rescanStorageScreen:addChild(rescanStatusLabel)
+
+local rescanBtn = sgl.Button:new(10, 7, 27, 3, "Rescan Now")
+rescanBtn.style.bgColor = colors.orange
+rescanBtn.onClick = function()
+    rescanStatusLabel:setText("Scanning...")
+    rescanStatusLabel.style.fgColor = colors.white
+    root:markDirty()
     
-    if result and result.items then
-        local items = result.items
-        for i = 1, 10 do
-            if items[i] then
-                itemListLabels[i]:setText(items[i].displayName .. " - $" .. items[i].price)
-            else
-                itemListLabels[i]:setText("")
-            end
-        end
-        
-        if #items == 0 then
-            itemListLabels[1]:setText("No items in catalog")
-            itemListLabels[1].style.fgColor = colors.gray
-        end
+    local result, err = sendToServer(network.MSG.SHOP_RESCAN, {})
+    
+    if result then
+        local msg = string.format("Found %d items (%d total stock)",
+            result.totalItems or 0, result.totalStock or 0)
+        rescanStatusLabel:setText(msg)
+        rescanStatusLabel.style.fgColor = colors.green
     else
-        itemListLabels[1]:setText("Error loading items")
-        itemListLabels[1].style.fgColor = colors.red
+        rescanStatusLabel:setText("Error: " .. tostring(err))
+        rescanStatusLabel.style.fgColor = colors.red
     end
     root:markDirty()
 end
+rescanStorageScreen:addChild(rescanBtn)
 
-local listItemsBackBtn = sgl.Button:new(3, 14, 15, 1, "Back")
-listItemsBackBtn.onClick = function()
+local rescanBackBtn = sgl.Button:new(3, 13, 15, 2, "Back")
+rescanBackBtn.onClick = function()
     showScreen("shop")
 end
-listItemsScreen:addChild(listItemsBackBtn)
+rescanStorageScreen:addChild(rescanBackBtn)
 
-local listItemsRefreshBtn = sgl.Button:new(20, 14, 20, 1, "Refresh")
-listItemsRefreshBtn.onClick = function()
-    refreshItemList()
-end
-listItemsScreen:addChild(listItemsRefreshBtn)
-
--- Process Items screen
+-- Process Items screen (kept for moving items from INPUT to STORAGE)
 local processItemsScreen = sgl.Panel:new(2, 2, 47, 15)
 processItemsScreen:setBorder(false)
 processItemsScreen:setVisible(false)
